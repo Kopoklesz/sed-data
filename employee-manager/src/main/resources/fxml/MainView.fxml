@@ -1,14 +1,76 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.lang.*?>
-<?import java.util.*?>
-<?import javafx.scene.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
 
-<AnchorPane xmlns="http://javafx.com/javafx"
-            xmlns:fx="http://javafx.com/fxml"
-            fx:controller="$CONTROLLER_NAME$"
-            prefHeight="400.0" prefWidth="600.0" >
+<VBox spacing="10" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.employeemanager.controller.MainViewController">
 
-</AnchorPane>
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <MenuBar>
+        <Menu text="File">
+            <MenuItem text="Add Employee" onAction="#showAddEmployeeDialog"/>
+            <MenuItem text="Add Work Record" onAction="#showAddWorkRecordDialog"/>
+            <SeparatorMenuItem/>
+            <MenuItem text="Export to Excel" onAction="#exportToExcel"/>
+            <SeparatorMenuItem/>
+            <MenuItem text="Exit" onAction="#exitApplication"/>
+        </Menu>
+        <Menu text="Edit">
+            <MenuItem text="Edit Employee" onAction="#showEditEmployeeDialog"/>
+            <MenuItem text="Edit Work Record" onAction="#showEditWorkRecordDialog"/>
+        </Menu>
+        <Menu text="Help">
+            <MenuItem text="About" onAction="#showAboutDialog"/>
+        </Menu>
+    </MenuBar>
+
+    <TabPane VBox.vgrow="ALWAYS">
+        <Tab text="Employees" closable="false">
+            <TableView fx:id="employeeTable">
+                <columns>
+                    <TableColumn fx:id="idColumn" text="ID"/>
+                    <TableColumn fx:id="nameColumn" text="Name"/>
+                    <TableColumn fx:id="birthPlaceColumn" text="Birth Place"/>
+                    <TableColumn fx:id="birthDateColumn" text="Birth Date"/>
+                    <TableColumn fx:id="motherNameColumn" text="Mother's Name"/>
+                    <TableColumn fx:id="taxNumberColumn" text="Tax Number"/>
+                    <TableColumn fx:id="socialSecurityColumn" text="Social Security"/>
+                    <TableColumn fx:id="addressColumn" text="Address"/>
+                </columns>
+            </TableView>
+        </Tab>
+        <Tab text="Work Records" closable="false">
+            <VBox spacing="10">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Filter by date:"/>
+                    <DatePicker fx:id="startDatePicker"/>
+                    <Label text="to"/>
+                    <DatePicker fx:id="endDatePicker"/>
+                    <Button text="Filter" onAction="#filterWorkRecords"/>
+                </HBox>
+                <TableView fx:id="workRecordTable" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="workIdColumn" text="ID"/>
+                        <TableColumn fx:id="employeeNameColumn" text="Employee"/>
+                        <TableColumn fx:id="notificationDateColumn" text="Notification Date"/>
+                        <TableColumn fx:id="ebevSerialColumn" text="EBEV Serial"/>
+                        <TableColumn fx:id="workDateColumn" text="Work Date"/>
+                        <TableColumn fx:id="paymentColumn" text="Payment"/>
+                        <TableColumn fx:id="hoursWorkedColumn" text="Hours"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+    </TabPane>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Add Employee" onAction="#showAddEmployeeDialog"/>
+        <Button text="Add Work Record" onAction="#showAddWorkRecordDialog"/>
+        <Button text="Export to Excel" onAction="#exportToExcel"/>
+    </HBox>
+</VBox>

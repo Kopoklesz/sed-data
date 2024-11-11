@@ -63,6 +63,26 @@
             <artifactId>javafx-fxml</artifactId>
             <version>${javafx.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-graphics</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-base</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-media</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-web</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
 
         <!-- Excel Export -->
         <dependency>
@@ -103,6 +123,10 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
+                    <jvmArguments>
+                        --module-path ${java.home}/lib/javafx-swt.jar:${java.home}/lib/javafx.base.jar:${java.home}/lib/javafx.controls.jar:${java.home}/lib/javafx.fxml.jar:${java.home}/lib/javafx.graphics.jar:${java.home}/lib/javafx.media.jar:${java.home}/lib/javafx.swing.jar:${java.home}/lib/javafx.web.jar
+                        --add-modules javafx.controls,javafx.fxml
+                    </jvmArguments>
                 </configuration>
             </plugin>
             <plugin>
@@ -110,7 +134,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>com.employeemanager.EmployeeManagerApplication</mainClass>
+                    <mainClass>com.employeemanager.JavaFxApplication</mainClass>
                 </configuration>
             </plugin>
         </plugins>
