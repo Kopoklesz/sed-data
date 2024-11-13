@@ -1,9 +1,20 @@
 package com.employeemanager.controller;
 
+import com.employeemanager.dialog.EmployeeDialog;
+import com.employeemanager.dialog.SettingsDialog;
+import com.employeemanager.dialog.UserGuideDialog;
+import com.employeemanager.dialog.WorkRecordDialog;
 import com.employeemanager.model.Employee;
 import com.employeemanager.model.WorkRecord;
+import com.employeemanager.model.fx.EmployeeFX;
+import com.employeemanager.model.fx.WorkRecordFX;
 import com.employeemanager.service.EmployeeService;
+import com.employeemanager.service.ReportService;
+import com.employeemanager.service.SettingsService;
+import com.employeemanager.util.AlertHelper;
+import com.employeemanager.util.ExcelExporter;
 import javafx.collections.FXCollections;
+import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
@@ -11,45 +22,71 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 
+import java.math.BigDecimal;
 import java.net.URL;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.ResourceBundle;
+import java.util.stream.Collectors;
+import com.employeemanager.component.StatusBar;
 
 @Controller
 @RequiredArgsConstructor
 public class MainViewController implements Initializable {
 
     private final EmployeeService employeeService;
+    private final ReportService reportService;
+    private final SettingsService settingsService;
+    private final ExcelExporter excelExporter;
 
-    @FXML private TableView<Employee> employeeTable;
-    @FXML private TableView<WorkRecord> workRecordTable;
+    // FXML injections for employee table
+    @FXML private TextField employeeSearchField;
+    @FXML private TableView<EmployeeFX> employeeTable;
+    @FXML private TableColumn<EmployeeFX, Long> idColumn;
+    @FXML private TableColumn<EmployeeFX, String> nameColumn;
+    @FXML private TableColumn<EmployeeFX, String> birthPlaceColumn;
+    @FXML private TableColumn<EmployeeFX, LocalDate> birthDateColumn;
+    @FXML private TableColumn<EmployeeFX, String> motherNameColumn;
+    @FXML private TableColumn<EmployeeFX, String> taxNumberColumn;
+    @FXML private TableColumn<EmployeeFX, String> socialSecurityColumn;
+    @FXML private TableColumn<EmployeeFX, String> addressColumn;
+
+    // FXML injections for work record table
+    @FXML private TableView<WorkRecordFX> workRecordTable;
     @FXML private DatePicker startDatePicker;
     @FXML private DatePicker endDatePicker;
+    @FXML private Label totalHoursLabel;
+    @FXML private Label totalPaymentLabel;
+    @FXML private TableColumn<WorkRecordFX, Long> workIdColumn;
+    @FXML private TableColumn<WorkRecordFX, String> employeeNameColumn;
+    @FXML private TableColumn<WorkRecordFX, LocalDate> notificationDateColumn;
+    @FXML private TableColumn<WorkRecordFX, String> ebevSerialColumn;
+    @FXML private TableColumn<WorkRecordFX, LocalDate> workDateColumn;
+    @FXML private TableColumn<WorkRecordFX, BigDecimal> paymentColumn;
+    @FXML private TableColumn<WorkRecordFX, Integer> hoursWorkedColumn;
 
-    // Employee table columns
-    @FXML private TableColumn<Employee, Long> idColumn;
-    @FXML private TableColumn<Employee, String> nameColumn;
-    @FXML private TableColumn<Employee, String> birthPlaceColumn;
-    @FXML private TableColumn<Employee, LocalDate> birthDateColumn;
-    @FXML private TableColumn<Employee, String> motherNameColumn;
-    @FXML private TableColumn<Employee, String> taxNumberColumn;
-    @FXML private TableColumn<Employee, String> socialSecurityColumn;
-    @FXML private TableColumn<Employee, String> addressColumn;
+    // FXML injections for report tab
+    @FXML private DatePicker reportStartDate;
+    @FXML private DatePicker reportEndDate;
+    @FXML private CheckBox includeEmployeeDetails;
+    @FXML private CheckBox includeWorkRecords;
+    @FXML private CheckBox includeSummary;
+    @FXML private ListView<String> reportList;
 
-    // Work record table columns
-    @FXML private TableColumn<WorkRecord, Long> workIdColumn;
-    @FXML private TableColumn<WorkRecord, String> employeeNameColumn;
-    @FXML private TableColumn<WorkRecord, LocalDate> notificationDateColumn;
-    @FXML private TableColumn<WorkRecord, String> ebevSerialColumn;
-    @FXML private TableColumn<WorkRecord, LocalDate> workDateColumn;
-    @FXML private TableColumn<WorkRecord, Double> paymentColumn;
-    @FXML private TableColumn<WorkRecord, Double> hoursWorkedColumn;
+    @FXML private StatusBar statusBar;
+
+    private FilteredList<EmployeeFX> filteredEmployees;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         setupEmployeeTable();
         setupWorkRecordTable();
+        setupSearchField();
+        setupDatePickers();
         loadInitialData();
+        updateStatus("Alkalmazás betöltve");
     }
 
     private void setupEmployeeTable() {
@@ -61,12 +98,17 @@ public class MainViewController implements Initializable {
         taxNumberColumn.setCellValueFactory(new PropertyValueFactory<>("taxNumber"));
         socialSecurityColumn.setCellValueFactory(new PropertyValueFactory<>("socialSecurityNumber"));
         addressColumn.setCellValueFactory(new PropertyValueFactory<>("address"));
+
+        employeeTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                loadEmployeeWorkRecords(newSelection);
+            }
+        });
     }
 
     private void setupWorkRecordTable() {
         workIdColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
-        employeeNameColumn.setCellValueFactory(cellData ->
-                cellData.getValue().getEmployee().nameProperty());
+        employeeNameColumn.setCellValueFactory(new PropertyValueFactory<>("employeeName"));
         notificationDateColumn.setCellValueFactory(new PropertyValueFactory<>("notificationDate"));
         ebevSerialColumn.setCellValueFactory(new PropertyValueFactory<>("ebevSerialNumber"));
         workDateColumn.setCellValueFactory(new PropertyValueFactory<>("workDate"));
@@ -74,39 +116,147 @@ public class MainViewController implements Initializable {
         hoursWorkedColumn.setCellValueFactory(new PropertyValueFactory<>("hoursWorked"));
     }
 
+    private void setupSearchField() {
+        employeeSearchField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (filteredEmployees != null) {
+                filteredEmployees.setPredicate(employee -> {
+                    if (newValue == null || newValue.isEmpty()) {
+                        return true;
+                    }
+                    String lowerCaseFilter = newValue.toLowerCase();
+                    return employee.getName().toLowerCase().contains(lowerCaseFilter);
+                });
+            }
+        });
+    }
+
+    private void setupDatePickers() {
+        LocalDate now = LocalDate.now();
+        startDatePicker.setValue(now.withDayOfMonth(1));
+        endDatePicker.setValue(now.withDayOfMonth(now.lengthOfMonth()));
+
+        reportStartDate.setValue(now.withDayOfMonth(1));
+        reportEndDate.setValue(now.withDayOfMonth(now.lengthOfMonth()));
+    }
+
     private void loadInitialData() {
-        employeeTable.setItems(FXCollections.observableArrayList(
-                employeeService.getAllEmployees()));
+        try {
+            List<Employee> employees = employeeService.getAllEmployees();
+            List<EmployeeFX> employeeFXList = employees.stream()
+                    .map(EmployeeFX::new)
+                    .collect(Collectors.toList());
+
+            filteredEmployees = new FilteredList<>(FXCollections.observableArrayList(employeeFXList));
+            employeeTable.setItems(filteredEmployees);
+
+            filterWorkRecords();
+            updateStatus("Adatok betöltve");
+        } catch (Exception e) {
+            AlertHelper.showError("Hiba", "Nem sikerült betölteni az adatokat", e.getMessage());
+            updateStatus("Hiba az adatok betöltése közben");
+        }
     }
 
     @FXML
     private void showAddEmployeeDialog() {
-        // TODO: Implement add employee dialog
-    }
-
-    @FXML
-    private void showAddWorkRecordDialog() {
-        // TODO: Implement add work record dialog
+        Dialog<EmployeeFX> dialog = new EmployeeDialog();
+        dialog.showAndWait().ifPresent(this::saveEmployee);
     }
 
     @FXML
     private void showEditEmployeeDialog() {
-        Employee selectedEmployee = employeeTable.getSelectionModel().getSelectedItem();
+        EmployeeFX selectedEmployee = employeeTable.getSelectionModel().getSelectedItem();
         if (selectedEmployee == null) {
-            showAlert("No Selection", "Please select an employee to edit.");
+            AlertHelper.showWarning("Figyelmeztetés", "Nincs kiválasztott alkalmazott");
             return;
         }
-        // TODO: Implement edit employee dialog
+
+        Dialog<EmployeeFX> dialog = new EmployeeDialog(selectedEmployee);
+        dialog.showAndWait().ifPresent(this::saveEmployee);
+    }
+
+    private void saveEmployee(EmployeeFX employeeFX) {
+        try {
+            Employee savedEmployee = employeeService.saveEmployee(employeeFX.toEmployee());
+            loadInitialData();
+            updateStatus("Alkalmazott mentve: " + savedEmployee.getName());
+        } catch (Exception e) {
+            AlertHelper.showError("Hiba", "Nem sikerült menteni az alkalmazottat", e.getMessage());
+            updateStatus("Hiba az alkalmazott mentése közben");
+        }
+    }
+
+    @FXML
+    private void deleteEmployee() {
+        EmployeeFX selectedEmployee = employeeTable.getSelectionModel().getSelectedItem();
+        if (selectedEmployee == null) {
+            AlertHelper.showWarning("Figyelmeztetés", "Nincs kiválasztott alkalmazott");
+            return;
+        }
+
+        if (AlertHelper.showConfirmation("Törlés megerősítése",
+                "Biztosan törli a kiválasztott alkalmazottat?",
+                "Ez a művelet nem vonható vissza.")) {
+            try {
+                employeeService.deleteEmployee(selectedEmployee.getId());
+                loadInitialData();
+                updateStatus("Alkalmazott törölve: " + selectedEmployee.getName());
+            } catch (Exception e) {
+                AlertHelper.showError("Hiba", "Nem sikerült törölni az alkalmazottat", e.getMessage());
+                updateStatus("Hiba az alkalmazott törlése közben");
+            }
+        }
+    }
+
+    @FXML
+    private void showAddWorkRecordDialog() {
+        Dialog<WorkRecordFX> dialog = new WorkRecordDialog(employeeService);
+        dialog.showAndWait().ifPresent(this::saveWorkRecord);
     }
 
     @FXML
     private void showEditWorkRecordDialog() {
-        WorkRecord selectedRecord = workRecordTable.getSelectionModel().getSelectedItem();
+        WorkRecordFX selectedRecord = workRecordTable.getSelectionModel().getSelectedItem();
         if (selectedRecord == null) {
-            showAlert("No Selection", "Please select a work record to edit.");
+            AlertHelper.showWarning("Figyelmeztetés", "Nincs kiválasztott munkanapló");
             return;
         }
-        // TODO: Implement edit work record dialog
+
+        Dialog<WorkRecordFX> dialog = new WorkRecordDialog(employeeService, selectedRecord);
+        dialog.showAndWait().ifPresent(this::saveWorkRecord);
+    }
+
+    private void saveWorkRecord(WorkRecordFX workRecordFX) {
+        try {
+            WorkRecord savedRecord = employeeService.addWorkRecord(workRecordFX.toWorkRecord());
+            filterWorkRecords();
+            updateStatus("Munkanapló mentve");
+        } catch (Exception e) {
+            AlertHelper.showError("Hiba", "Nem sikerült menteni a munkanaplót", e.getMessage());
+            updateStatus("Hiba a munkanapló mentése közben");
+        }
+    }
+
+    @FXML
+    private void deleteWorkRecord() {
+        WorkRecordFX selectedRecord = workRecordTable.getSelectionModel().getSelectedItem();
+        if (selectedRecord == null) {
+            AlertHelper.showWarning("Figyelmeztetés", "Nincs kiválasztott munkanapló");
+            return;
+        }
+
+        if (AlertHelper.showConfirmation("Törlés megerősítése",
+                "Biztosan törli a kiválasztott munkanaplót?",
+                "Ez a művelet nem vonható vissza.")) {
+            try {
+                employeeService.deleteWorkRecord(selectedRecord.getId());
+                filterWorkRecords();
+                updateStatus("Munkanapló törölve");
+            } catch (Exception e) {
+                AlertHelper.showError("Hiba", "Nem sikerült törölni a munkanaplót", e.getMessage());
+                updateStatus("Hiba a munkanapló törlése közben");
+            }
+        }
     }
 
     @FXML
@@ -115,40 +265,285 @@ public class MainViewController implements Initializable {
         LocalDate end = endDatePicker.getValue();
 
         if (start == null || end == null) {
-            showAlert("Invalid Date Range", "Please select both start and end dates.");
+            AlertHelper.showWarning("Figyelmeztetés", "Kérem válasszon időszakot");
             return;
         }
 
-        workRecordTable.setItems(FXCollections.observableArrayList(
-                employeeService.getMonthlyRecords(start, end)));
+        try {
+            List<WorkRecord> workRecords = employeeService.getMonthlyRecords(start, end);
+            List<WorkRecordFX> workRecordFXList = workRecords.stream()
+                    .map(WorkRecordFX::new)
+                    .collect(Collectors.toList());
+
+            workRecordTable.setItems(FXCollections.observableArrayList(workRecordFXList));
+            updateSummary(workRecordFXList);
+            updateStatus("Munkanaplók szűrve");
+        } catch (Exception e) {
+            AlertHelper.showError("Hiba", "Nem sikerült szűrni a munkanaplókat", e.getMessage());
+            updateStatus("Hiba a munkanaplók szűrése közben");
+        }
+    }
+
+    private void updateSummary(List<WorkRecordFX> records) {
+        int totalHours = records.stream()
+                .mapToInt(WorkRecordFX::getHoursWorked)
+                .sum();
+
+        BigDecimal totalPayment = records.stream()
+                .map(WorkRecordFX::getPayment)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        totalHoursLabel.setText(String.format("%d óra", totalHours));
+        totalPaymentLabel.setText(String.format("%,.0f Ft", totalPayment));
+    }
+
+    @FXML
+    private void generateReport() {
+        try {
+            LocalDate start = reportStartDate.getValue();
+            LocalDate end = reportEndDate.getValue();
+
+            if (start == null || end == null) {
+                AlertHelper.showWarning("Figyelmeztetés", "Kérem válasszon időszakot");
+                return;
+            }
+
+            String reportPath = reportService.generateReport(start, end,
+                    includeEmployeeDetails.isSelected(),
+                    includeWorkRecords.isSelected(),
+                    includeSummary.isSelected());
+
+            loadReportList();
+            updateStatus("Riport generálva: " + reportPath);
+        } catch (Exception e) {
+            AlertHelper.showError("Hiba", "Nem sikerült generálni a riportot", e.getMessage());
+            updateStatus("Hiba a riport generálása közben");
+        }
+    }
+
+    private void loadReportList() {
+        try {
+            List<String> reports = reportService.getAvailableReports();
+            reportList.setItems(FXCollections.observableArrayList(reports));
+        } catch (Exception e) {
+            AlertHelper.showError("Hiba", "Nem sikerült betölteni a riportokat", e.getMessage());
+        }
     }
 
     @FXML
     private void exportToExcel() {
-        // TODO: Implement Excel export
+        try {
+            String filePath = excelExporter.exportWorkRecords(
+                    workRecordTable.getItems(),
+                    startDatePicker.getValue(),
+                    endDatePicker.getValue());
+
+            updateStatus("Excel exportálva: " + filePath);
+            AlertHelper.showInformation("Sikeres exportálás",
+                    "Az Excel fájl elkészült",
+                    "Fájl helye: " + filePath);
+        } catch (Exception e) {
+            AlertHelper.showError("Hiba", "Nem sikerült exportálni az Excel fájlt", e.getMessage());
+            updateStatus("Hiba az Excel exportálás közben");
+        }
     }
 
     @FXML
-    private void exitApplication() {
-        System.exit(0);
+    private void showSettings() {
+        try {
+            Dialog<Void> dialog = new SettingsDialog(settingsService);
+            dialog.showAndWait();
+            updateStatus("Beállítások mentve");
+        } catch (Exception e) {
+            AlertHelper.showError("Hiba", "Nem sikerült megnyitni a beállításokat", e.getMessage());
+            updateStatus("Hiba a beállítások megnyitása közben");
+        }
     }
 
     @FXML
     private void showAboutDialog() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("About Employee Manager");
-        alert.setHeaderText(null);
-        alert.setContentText("Employee Manager v1.0\n" +
-                "A simple application to manage employee data and work records.\n\n" +
-                "© 2024 Your Company Name");
+        alert.setTitle("Névjegy");
+        alert.setHeaderText("Alkalmazott Nyilvántartó Rendszer");
+        alert.setContentText("Verzió: " + settingsService.getApplicationVersion() + "\n" +
+                "Készítette: " + settingsService.getApplicationAuthor() + "\n\n" +
+                "© 2024 Minden jog fenntartva");
         alert.showAndWait();
     }
 
-    private void showAlert(String title, String content) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(content);
-        alert.showAndWait();
+    @FXML
+    private void showUserGuide() {
+        try {
+            Dialog<Void> dialog = new UserGuideDialog();
+            dialog.showAndWait();
+        } catch (Exception e) {
+            AlertHelper.showError("Hiba", "Nem sikerült megnyitni a használati útmutatót", e.getMessage());
+        }
+    }
+
+    @FXML
+    private void exitApplication() {
+        if (AlertHelper.showConfirmation("Kilépés",
+                "Biztosan ki szeretne lépni?",
+                "Minden nem mentett változás elvész.")) {
+            System.exit(0);
+        }
+    }
+
+    private void updateStatus(String message) {
+        statusBar.setText(message + " - " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+    }
+
+    private void loadEmployeeWorkRecords(EmployeeFX employee) {
+        try {
+            LocalDate start = startDatePicker.getValue();
+            LocalDate end = endDatePicker.getValue();
+
+            if (start != null && end != null) {
+                List<WorkRecord> records = employeeService.getEmployeeMonthlyRecords(
+                        employee.getId(), start, end);
+
+                List<WorkRecordFX> workRecordFXList = records.stream()
+                        .map(WorkRecordFX::new)
+                        .collect(Collectors.toList());
+
+                workRecordTable.setItems(FXCollections.observableArrayList(workRecordFXList));
+                updateSummary(workRecordFXList);
+                updateStatus(employee.getName() + " munkanaplói betöltve");
+            }
+        } catch (Exception e) {
+            AlertHelper.showError("Hiba", "Nem sikerült betölteni az alkalmazott munkanaplóit", e.getMessage());
+            updateStatus("Hiba a munkanaplók betöltése közben");
+        }
+    }
+
+    @FXML
+    private void showEmployeeList() {
+        // Alapértelmezetten már az alkalmazottak tab van megnyitva
+    }
+
+    @FXML
+    private void showEmployeeSearch() {
+        // A keresés már implementálva van a TextField-en keresztül
+        employeeSearchField.requestFocus();
+    }
+
+    @FXML
+    private void searchEmployees() {
+        // A keresés már automatikusan működik a TextField listener-en keresztül
+        String searchText = employeeSearchField.getText();
+        if (filteredEmployees != null) {
+            filteredEmployees.setPredicate(employee -> {
+                if (searchText == null || searchText.isEmpty()) {
+                    return true;
+                }
+                return employee.getName().toLowerCase().contains(searchText.toLowerCase());
+            });
+        }
+    }
+
+    @FXML
+    private void showMonthlyOverview() {
+        // Átvált a havi nyilvántartás tabra
+        TabPane tabPane = (TabPane) workRecordTable.getScene().lookup(".tab-pane");
+        tabPane.getSelectionModel().select(1); // 1 = második tab
+    }
+
+    @FXML
+    private void showWorkRecordSearch() {
+        // Átvált a havi nyilvántartás tabra és fókuszba helyezi a dátumválasztót
+        TabPane tabPane = (TabPane) workRecordTable.getScene().lookup(".tab-pane");
+        tabPane.getSelectionModel().select(1);
+        startDatePicker.requestFocus();
+    }
+
+    @FXML
+    private void generateMonthlyReport() {
+        // Átvált a riportok tabra és beállítja az aktuális hónapot
+        TabPane tabPane = (TabPane) reportList.getScene().lookup(".tab-pane");
+        tabPane.getSelectionModel().select(2); // 2 = harmadik tab
+        LocalDate now = LocalDate.now();
+        reportStartDate.setValue(now.withDayOfMonth(1));
+        reportEndDate.setValue(now.withDayOfMonth(now.lengthOfMonth()));
+        includeWorkRecords.setSelected(true);
+        includeSummary.setSelected(true);
+        generateReport();
+    }
+
+    @FXML
+    private void generateEmployeeReport() {
+        // Átvált a riportok tabra és beállítja az alkalmazotti részleteket
+        TabPane tabPane = (TabPane) reportList.getScene().lookup(".tab-pane");
+        tabPane.getSelectionModel().select(2);
+        includeEmployeeDetails.setSelected(true);
+        generateReport();
+    }
+
+    @FXML
+    private void showCustomReportDialog() {
+        // Átvált a riportok tabra
+        TabPane tabPane = (TabPane) reportList.getScene().lookup(".tab-pane");
+        tabPane.getSelectionModel().select(2);
+    }
+
+    @FXML
+    private void openReport() {
+        String selectedReport = reportList.getSelectionModel().getSelectedItem();
+        if (selectedReport == null) {
+            AlertHelper.showWarning("Figyelmeztetés", "Nincs kiválasztott riport");
+            return;
+        }
+
+        try {
+            // TODO: Implement report opening logic
+            updateStatus("Riport megnyitása: " + selectedReport);
+        } catch (Exception e) {
+            AlertHelper.showError("Hiba", "Nem sikerült megnyitni a riportot", e.getMessage());
+        }
+    }
+
+    @FXML
+    private void exportReport() {
+        String selectedReport = reportList.getSelectionModel().getSelectedItem();
+        if (selectedReport == null) {
+            AlertHelper.showWarning("Figyelmeztetés", "Nincs kiválasztott riport");
+            return;
+        }
+
+        try {
+            // TODO: Implement report export logic
+            updateStatus("Riport exportálása: " + selectedReport);
+        } catch (Exception e) {
+            AlertHelper.showError("Hiba", "Nem sikerült exportálni a riportot", e.getMessage());
+        }
+    }
+
+    @FXML
+    private void deleteReport() {
+        String selectedReport = reportList.getSelectionModel().getSelectedItem();
+        if (selectedReport == null) {
+            AlertHelper.showWarning("Figyelmeztetés", "Nincs kiválasztott riport");
+            return;
+        }
+
+        if (AlertHelper.showConfirmation("Törlés megerősítése",
+                "Biztosan törli a kiválasztott riportot?",
+                "Ez a művelet nem vonható vissza.")) {
+            try {
+                // TODO: Implement report deletion logic
+                loadReportList();
+                updateStatus("Riport törölve: " + selectedReport);
+            } catch (Exception e) {
+                AlertHelper.showError("Hiba", "Nem sikerült törölni a riportot", e.getMessage());
+            }
+        }
+    }
+
+    @FXML
+    private void showEmployeeWorkRecords() {
+        EmployeeFX selectedEmployee = employeeTable.getSelectionModel().getSelectedItem();
+        if (selectedEmployee != null) {
+            loadEmployeeWorkRecords(selectedEmployee);
+        }
     }
 }

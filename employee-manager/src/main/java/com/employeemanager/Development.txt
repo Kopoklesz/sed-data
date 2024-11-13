@@ -1,0 +1,36 @@
+További javaslatok:
+
+a) Excel export formátumok:
+
+"e-bev" munkalap: Részletes napi bontású munkanyilvántartás
+"dátum szerint" munkalap: Napi összesítés személyenként
+"név szerint" munkalap: Személyenkénti bontás
+"ki hány napot dolgozott" munkalap: Havi összesítés
+
+b) Új szolgáltatások:
+
+MonthlyReportService a havi kimutatások kezeléséhez
+ExcelExportService a különböző Excel formátumok generálásához
+ValidationService az adatok ellenőrzéséhez
+
+c) GUI módosítások:
+
+Különválasztani két fő funkciót:
+
+Alkalmazott kezelés (CRUD műveletek az alkalmazottakra)
+Munkanapló kezelés (havi bontásban)
+
+
+Új menüpontok:
+
+Alkalmazottak
+Havi nyilvántartás
+Riportok
+Beállítások
+
+A legfontosabb változtatások:
+
+Az alkalmazottak és munkanapló különválasztása
+Havi bontás támogatása
+Különböző Excel export formátumok
+Összesítő nézetek támogatása

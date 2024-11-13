@@ -3,16 +3,16 @@ package com.employeemanager.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.math.BigDecimal;
 
 @Data
 @NoArgsConstructor
 @Entity
 @Table(name = "work_records")
 public class WorkRecord {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -33,11 +33,11 @@ public class WorkRecord {
     @Column(name = "work_date", nullable = false)
     private LocalDate workDate;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal payment;
 
     @Column(name = "hours_worked", nullable = false)
-    private Double hoursWorked;
+    private Integer hoursWorked;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

@@ -4,6 +4,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.Insets?>
 
+<?import com.employeemanager.component.StatusBar?>
 <VBox spacing="10" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.employeemanager.controller.MainViewController">
 
@@ -12,65 +13,142 @@
     </padding>
 
     <MenuBar>
-        <Menu text="File">
-            <MenuItem text="Add Employee" onAction="#showAddEmployeeDialog"/>
-            <MenuItem text="Add Work Record" onAction="#showAddWorkRecordDialog"/>
+        <Menu text="Alkalmazottak">
+            <MenuItem text="Új alkalmazott" onAction="#showAddEmployeeDialog"/>
+            <MenuItem text="Alkalmazottak listája" onAction="#showEmployeeList"/>
+            <MenuItem text="Keresés" onAction="#showEmployeeSearch"/>
             <SeparatorMenuItem/>
-            <MenuItem text="Export to Excel" onAction="#exportToExcel"/>
+            <MenuItem text="Kilépés" onAction="#exitApplication"/>
+        </Menu>
+        <Menu text="Havi nyilvántartás">
+            <MenuItem text="Új munkanapló" onAction="#showAddWorkRecordDialog"/>
+            <MenuItem text="Havi áttekintés" onAction="#showMonthlyOverview"/>
+            <MenuItem text="Keresés időszakban" onAction="#showWorkRecordSearch"/>
+        </Menu>
+        <Menu text="Riportok">
+            <MenuItem text="Havi összesítő" onAction="#generateMonthlyReport"/>
+            <MenuItem text="Alkalmazotti kimutatás" onAction="#generateEmployeeReport"/>
+            <MenuItem text="Egyéni riport készítése" onAction="#showCustomReportDialog"/>
             <SeparatorMenuItem/>
-            <MenuItem text="Exit" onAction="#exitApplication"/>
+            <MenuItem text="Exportálás Excelbe" onAction="#exportToExcel"/>
         </Menu>
-        <Menu text="Edit">
-            <MenuItem text="Edit Employee" onAction="#showEditEmployeeDialog"/>
-            <MenuItem text="Edit Work Record" onAction="#showEditWorkRecordDialog"/>
+        <Menu text="Beállítások">
+            <MenuItem text="Általános beállítások" onAction="#showSettings"/>
         </Menu>
-        <Menu text="Help">
-            <MenuItem text="About" onAction="#showAboutDialog"/>
+        <Menu text="Súgó">
+            <MenuItem text="Használati útmutató" onAction="#showUserGuide"/>
+            <MenuItem text="Névjegy" onAction="#showAboutDialog"/>
         </Menu>
     </MenuBar>
 
     <TabPane VBox.vgrow="ALWAYS">
-        <Tab text="Employees" closable="false">
-            <TableView fx:id="employeeTable">
-                <columns>
-                    <TableColumn fx:id="idColumn" text="ID"/>
-                    <TableColumn fx:id="nameColumn" text="Name"/>
-                    <TableColumn fx:id="birthPlaceColumn" text="Birth Place"/>
-                    <TableColumn fx:id="birthDateColumn" text="Birth Date"/>
-                    <TableColumn fx:id="motherNameColumn" text="Mother's Name"/>
-                    <TableColumn fx:id="taxNumberColumn" text="Tax Number"/>
-                    <TableColumn fx:id="socialSecurityColumn" text="Social Security"/>
-                    <TableColumn fx:id="addressColumn" text="Address"/>
-                </columns>
-            </TableView>
-        </Tab>
-        <Tab text="Work Records" closable="false">
+        <!-- Alkalmazottak kezelése tab -->
+        <Tab text="Alkalmazottak" closable="false">
             <VBox spacing="10">
                 <HBox spacing="10" alignment="CENTER_LEFT">
-                    <Label text="Filter by date:"/>
-                    <DatePicker fx:id="startDatePicker"/>
-                    <Label text="to"/>
-                    <DatePicker fx:id="endDatePicker"/>
-                    <Button text="Filter" onAction="#filterWorkRecords"/>
+                    <TextField fx:id="employeeSearchField" promptText="Keresés név szerint..." HBox.hgrow="ALWAYS"/>
+                    <Button text="Keresés" onAction="#searchEmployees"/>
+                    <Button text="Új alkalmazott" onAction="#showAddEmployeeDialog"/>
                 </HBox>
+                
+                <TableView fx:id="employeeTable" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="idColumn" text="ID"/>
+                        <TableColumn fx:id="nameColumn" text="Név"/>
+                        <TableColumn fx:id="birthPlaceColumn" text="Születési hely"/>
+                        <TableColumn fx:id="birthDateColumn" text="Születési idő"/>
+                        <TableColumn fx:id="motherNameColumn" text="Anyja neve"/>
+                        <TableColumn fx:id="taxNumberColumn" text="Adószám"/>
+                        <TableColumn fx:id="socialSecurityColumn" text="TAJ szám"/>
+                        <TableColumn fx:id="addressColumn" text="Lakcím"/>
+                    </columns>
+                    <contextMenu>
+                        <ContextMenu>
+                            <items>
+                                <MenuItem text="Szerkesztés" onAction="#showEditEmployeeDialog"/>
+                                <MenuItem text="Törlés" onAction="#deleteEmployee"/>
+                                <MenuItem text="Munkanapló megtekintése" onAction="#showEmployeeWorkRecords"/>
+                            </items>
+                        </ContextMenu>
+                    </contextMenu>
+                </TableView>
+            </VBox>
+        </Tab>
+
+        <!-- Havi nyilvántartás tab -->
+        <Tab text="Havi nyilvántartás" closable="false">
+            <VBox spacing="10">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Időszak:"/>
+                    <DatePicker fx:id="startDatePicker"/>
+                    <Label text="-"/>
+                    <DatePicker fx:id="endDatePicker"/>
+                    <Button text="Szűrés" onAction="#filterWorkRecords"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button text="Új munkanapló" onAction="#showAddWorkRecordDialog"/>
+                    <Button text="Exportálás" onAction="#exportToExcel"/>
+                </HBox>
+                
                 <TableView fx:id="workRecordTable" VBox.vgrow="ALWAYS">
                     <columns>
                         <TableColumn fx:id="workIdColumn" text="ID"/>
-                        <TableColumn fx:id="employeeNameColumn" text="Employee"/>
-                        <TableColumn fx:id="notificationDateColumn" text="Notification Date"/>
-                        <TableColumn fx:id="ebevSerialColumn" text="EBEV Serial"/>
-                        <TableColumn fx:id="workDateColumn" text="Work Date"/>
-                        <TableColumn fx:id="paymentColumn" text="Payment"/>
-                        <TableColumn fx:id="hoursWorkedColumn" text="Hours"/>
+                        <TableColumn fx:id="employeeNameColumn" text="Alkalmazott"/>
+                        <TableColumn fx:id="notificationDateColumn" text="Bejelentés dátuma"/>
+                        <TableColumn fx:id="ebevSerialColumn" text="EBEV azonosító"/>
+                        <TableColumn fx:id="workDateColumn" text="Munkanap"/>
+                        <TableColumn fx:id="paymentColumn" text="Bérezés"/>
+                        <TableColumn fx:id="hoursWorkedColumn" text="Munkaórák"/>
                     </columns>
+                    <contextMenu>
+                        <ContextMenu>
+                            <items>
+                                <MenuItem text="Szerkesztés" onAction="#showEditWorkRecordDialog"/>
+                                <MenuItem text="Törlés" onAction="#deleteWorkRecord"/>
+                            </items>
+                        </ContextMenu>
+                    </contextMenu>
                 </TableView>
+
+                <HBox spacing="10" alignment="CENTER_RIGHT">
+                    <Label text="Összesítés:"/>
+                    <Label text="Összes munkaóra:"/>
+                    <Label fx:id="totalHoursLabel" style="-fx-font-weight: bold;"/>
+                    <Label text="Összes kifizetés:"/>
+                    <Label fx:id="totalPaymentLabel" style="-fx-font-weight: bold;"/>
+                </HBox>
+            </VBox>
+        </Tab>
+
+        <!-- Riportok tab -->
+        <Tab text="Riportok" closable="false">
+            <VBox spacing="10">
+                <TitledPane text="Riport beállítások" expanded="true">
+                    <VBox spacing="10">
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Időszak:"/>
+                            <DatePicker fx:id="reportStartDate"/>
+                            <Label text="-"/>
+                            <DatePicker fx:id="reportEndDate"/>
+                        </HBox>
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <CheckBox fx:id="includeEmployeeDetails" text="Alkalmazotti adatok"/>
+                            <CheckBox fx:id="includeWorkRecords" text="Munkanaplók"/>
+                            <CheckBox fx:id="includeSummary" text="Összesítés"/>
+                        </HBox>
+                        <Button text="Riport generálása" onAction="#generateReport"/>
+                    </VBox>
+                </TitledPane>
+                
+                <ListView fx:id="reportList" VBox.vgrow="ALWAYS"/>
+                
+                <HBox spacing="10" alignment="CENTER_RIGHT">
+                    <Button text="Megnyitás" onAction="#openReport"/>
+                    <Button text="Exportálás" onAction="#exportReport"/>
+                    <Button text="Törlés" onAction="#deleteReport"/>
+                </HBox>
             </VBox>
         </Tab>
     </TabPane>
 
-    <HBox spacing="10" alignment="CENTER_RIGHT">
-        <Button text="Add Employee" onAction="#showAddEmployeeDialog"/>
-        <Button text="Add Work Record" onAction="#showAddWorkRecordDialog"/>
-        <Button text="Export to Excel" onAction="#exportToExcel"/>
-    </HBox>
+    <StatusBar fx:id="statusBar"/>
 </VBox>
