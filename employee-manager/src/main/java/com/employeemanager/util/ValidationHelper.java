@@ -13,6 +13,10 @@ public class ValidationHelper {
     private static final Pattern EBEV_SERIAL_PATTERN = Pattern.compile("[A-Z0-9]{10}");
 
     public static boolean isValidTaxNumber(String taxNumber) {
+        // Null check hozzáadása
+        if (taxNumber == null || taxNumber.trim().isEmpty()) {
+            return false;
+        }
         return TAX_NUMBER_PATTERN.matcher(taxNumber).matches();
     }
 
@@ -66,5 +70,17 @@ public class ValidationHelper {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+    public static boolean isValidWorkDate(LocalDate workDate) {
+        return workDate != null && !workDate.isAfter(LocalDate.now());
+    }
+
+    public static boolean isValidNotificationDate(LocalDate notificationDate, LocalDate workDate) {
+        return notificationDate != null &&
+                !notificationDate.isAfter(LocalDate.now()) &&
+                (workDate == null || !notificationDate.isAfter(workDate));
     }
 }

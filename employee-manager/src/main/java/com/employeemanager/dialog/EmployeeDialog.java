@@ -7,6 +7,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.util.StringConverter;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 public class EmployeeDialog extends Dialog<EmployeeFX> {
 
@@ -80,6 +81,32 @@ public class EmployeeDialog extends Dialog<EmployeeFX> {
         // OK gomb engedélyezése/tiltása a validáció alapján
         Button okButton = (Button) dialogPane.lookupButton(ButtonType.OK);
         okButton.setDisable(true);
+
+        birthDatePicker.setConverter(new StringConverter<LocalDate>() {
+            private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+            @Override
+            public String toString(LocalDate date) {
+                return date != null ? formatter.format(date) : "";
+            }
+
+            @Override
+            public LocalDate fromString(String string) {
+                try {
+                    return string != null && !string.isEmpty() ? LocalDate.parse(string, formatter) : null;
+                } catch (Exception e) {
+                    return null;
+                }
+            }
+        });
+
+        birthDatePicker.setDayCellFactory(picker -> new DateCell() {
+            @Override
+            public void updateItem(LocalDate date, boolean empty) {
+                super.updateItem(date, empty);
+                setDisable(empty || date.isAfter(LocalDate.now()));
+            }
+        });
     }
 
     private void populateFields() {
@@ -101,15 +128,25 @@ public class EmployeeDialog extends Dialog<EmployeeFX> {
         Button okButton = (Button) getDialogPane().lookupButton(ButtonType.OK);
 
         Runnable validateFields = () -> {
-            boolean isValid = ValidationHelper.isValidName(nameField.getText()) &&
-                    ValidationHelper.isValidTaxNumber(taxNumberField.getText()) &&
-                    ValidationHelper.isValidSocialSecurityNumber(socialSecurityField.getText()) &&
-                    ValidationHelper.isValidBirthDate(birthDatePicker.getValue());
+            try {
+                String taxNumberText = taxNumberField.getText();
+                String ssnText = socialSecurityField.getText();
+                String nameText = nameField.getText();
+                LocalDate birthDate = birthDatePicker.getValue();
 
-            okButton.setDisable(!isValid);
+                boolean isValid = nameText != null && ValidationHelper.isValidName(nameText) &&
+                        taxNumberText != null && ValidationHelper.isValidTaxNumber(taxNumberText) &&
+                        ssnText != null && ValidationHelper.isValidSocialSecurityNumber(ssnText) &&
+                        birthDate != null && ValidationHelper.isValidBirthDate(birthDate);
+
+                okButton.setDisable(!isValid);
+            } catch (Exception e) {
+                // Ha bármilyen hiba történik a validáció során, letiltjuk az OK gombot
+                okButton.setDisable(true);
+            }
         };
 
-        // Figyelők hozzáadása minden mezőhöz
+        // Figyelők beállítása
         nameField.textProperty().addListener((obs, oldVal, newVal) -> validateFields.run());
         birthDatePicker.valueProperty().addListener((obs, oldVal, newVal) -> validateFields.run());
         taxNumberField.textProperty().addListener((obs, oldVal, newVal) -> validateFields.run());

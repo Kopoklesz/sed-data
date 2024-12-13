@@ -12,6 +12,7 @@ import javafx.util.StringConverter;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class WorkRecordDialog extends Dialog<WorkRecordFX> {
@@ -97,6 +98,37 @@ public class WorkRecordDialog extends Dialog<WorkRecordFX> {
 
         Button okButton = (Button) dialogPane.lookupButton(ButtonType.OK);
         okButton.setDisable(true);
+
+        StringConverter<LocalDate> dateConverter = new StringConverter<>() {
+            private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+            @Override
+            public String toString(LocalDate date) {
+                return date != null ? formatter.format(date) : "";
+            }
+
+            @Override
+            public LocalDate fromString(String string) {
+                try {
+                    return string != null && !string.isEmpty() ? LocalDate.parse(string, formatter) : null;
+                } catch (Exception e) {
+                    return null;
+                }
+            }
+        };
+
+        notificationDatePicker.setConverter(dateConverter);
+        workDatePicker.setConverter(dateConverter);
+
+        // Munkanap nem lehet jövőbeli
+        workDatePicker.setDayCellFactory(picker -> new DateCell() {
+            @Override
+            public void updateItem(LocalDate date, boolean empty) {
+                super.updateItem(date, empty);
+                setDisable(empty || date.isAfter(LocalDate.now()));
+            }
+        });
+
     }
 
     private void loadEmployees() {

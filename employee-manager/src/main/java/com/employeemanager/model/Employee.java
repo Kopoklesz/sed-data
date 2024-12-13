@@ -1,5 +1,6 @@
 package com.employeemanager.model;
 
+import com.employeemanager.config.LocalDateAttributeConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -23,7 +24,7 @@ public class Employee {
     private String birthPlace;
 
     @Column(name = "birth_date")
-    @Temporal(TemporalType.DATE)
+    @Convert(converter = LocalDateAttributeConverter.class)
     private LocalDate birthDate;
 
     @Column(name = "mother_name")
@@ -38,6 +39,7 @@ public class Employee {
     private String address;
 
     @Column(name = "created_at")
+    @Temporal(TemporalType.DATE)
     private LocalDate createdAt;
 
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL)
@@ -47,4 +49,5 @@ public class Employee {
     protected void onCreate() {
         createdAt = LocalDate.now();
     }
+
 }

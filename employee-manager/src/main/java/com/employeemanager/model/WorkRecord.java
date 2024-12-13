@@ -1,5 +1,6 @@
 package com.employeemanager.model;
 
+import com.employeemanager.config.LocalDateAttributeConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -22,15 +23,18 @@ public class WorkRecord {
     private Employee employee;
 
     @Column(name = "notification_date", nullable = false)
+    @Convert(converter = LocalDateAttributeConverter.class)
     private LocalDate notificationDate;
 
     @Column(name = "notification_time", nullable = false)
+    @Temporal(TemporalType.TIMESTAMP)
     private LocalDateTime notificationTime;
 
     @Column(name = "ebev_serial", nullable = false)
     private String ebevSerialNumber;
 
     @Column(name = "work_date", nullable = false)
+    @Convert(converter = LocalDateAttributeConverter.class)
     private LocalDate workDate;
 
     @Column(nullable = false, precision = 10, scale = 2)
@@ -40,6 +44,7 @@ public class WorkRecord {
     private Integer hoursWorked;
 
     @Column(name = "created_at")
+    @Temporal(TemporalType.TIMESTAMP)
     private LocalDateTime createdAt;
 
     @PrePersist
