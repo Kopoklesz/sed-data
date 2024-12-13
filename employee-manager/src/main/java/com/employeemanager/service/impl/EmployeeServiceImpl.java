@@ -22,6 +22,7 @@ import java.util.concurrent.ExecutionException;
 public class EmployeeServiceImpl implements EmployeeService {
     private static final Logger logger = LoggerFactory.getLogger(EmployeeServiceImpl.class);
     private final EmployeeRepository employeeRepository;
+    private final WorkRecordService workRecordService;
 
     @Override
     public Employee save(Employee employee) throws ServiceException {
@@ -117,5 +118,45 @@ public class EmployeeServiceImpl implements EmployeeService {
                 ValidationHelper.isValidTaxNumber(employee.getTaxNumber()) &&
                 ValidationHelper.isValidSocialSecurityNumber(employee.getSocialSecurityNumber()) &&
                 ValidationHelper.isValidBirthDate(employee.getBirthDate());
+    }
+
+    @Override
+    public WorkRecord addWorkRecord(WorkRecord workRecord) throws ServiceException {
+        if (workRecord == null || workRecord.getEmployee() == null) {
+            throw new ServiceException("Invalid work record data");
+        }
+
+        try {
+            // Ellenőrizzük, hogy létezik-e az alkalmazott
+            Optional<Employee> employee = findById(workRecord.getEmployee().getId().toString());
+            if (employee.isEmpty()) {
+                throw new ServiceException("Employee not found");
+            }
+
+            // Validáljuk és mentsük a munkanaplót
+            if (!workRecordService.validateWorkRecord(workRecord)) {
+                throw new ServiceException("Invalid work record data");
+            }
+
+            return workRecordService.save(workRecord);
+        } catch (Exception e) {
+            logger.error("Error adding work record", e);
+            throw new ServiceException("Failed to add work record", e);
+        }
+    }
+
+    @Override
+    public List<WorkRecord> getMonthlyRecords(LocalDate startDate, LocalDate endDate) throws ServiceException {
+        return workRecordService.getMonthlyRecords(startDate, endDate);
+    }
+
+    @Override
+    public List<WorkRecord> getEmployeeMonthlyRecords(Long employeeId, LocalDate startDate, LocalDate endDate) throws ServiceException {
+        return workRecordService.getEmployeeMonthlyRecords(employeeId.toString(), startDate, endDate);
+    }
+
+    @Override
+    public void deleteWorkRecord(Long id) throws ServiceException {
+        workRecordService.deleteById(id.toString());
     }
 }

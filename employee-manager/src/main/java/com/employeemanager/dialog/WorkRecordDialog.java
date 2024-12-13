@@ -2,7 +2,7 @@ package com.employeemanager.dialog;
 
 import com.employeemanager.model.Employee;
 import com.employeemanager.model.fx.WorkRecordFX;
-import com.employeemanager.service.EmployeeService;
+import com.employeemanager.service.interfaces.EmployeeService;
 import com.employeemanager.util.ValidationHelper;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;

@@ -22,7 +22,6 @@ import java.util.concurrent.ExecutionException;
 public class WorkRecordServiceImpl implements WorkRecordService {
     private static final Logger logger = LoggerFactory.getLogger(WorkRecordServiceImpl.class);
     private final WorkRecordRepository workRecordRepository;
-    private final EmployeeService employeeService;
 
     @Override
     public WorkRecord save(WorkRecord workRecord) throws ServiceException {

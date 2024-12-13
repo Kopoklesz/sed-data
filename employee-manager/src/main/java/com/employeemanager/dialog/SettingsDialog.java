@@ -1,6 +1,6 @@
 package com.employeemanager.dialog;
 
-import com.employeemanager.service.SettingsService;
+import com.employeemanager.service.impl.SettingsService;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;

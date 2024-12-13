@@ -23,6 +23,7 @@ public class Employee {
     private String birthPlace;
 
     @Column(name = "birth_date")
+    @Temporal(TemporalType.DATE)
     private LocalDate birthDate;
 
     @Column(name = "mother_name")

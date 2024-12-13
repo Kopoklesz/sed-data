@@ -40,18 +40,16 @@
             <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
 
         <!-- Database -->
         <dependency>
             <groupId>com.google.firebase</groupId>
             <artifactId>firebase-admin</artifactId>
             <version>${firebase-admin.version}</version>
-        </dependency>
-
-        <!-- Add Reactive support -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
 
         <!-- JavaFX -->
@@ -120,16 +118,13 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <mainClass>com.employeemanager.EmployeeManagerApplication</mainClass>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
-                    <jvmArguments>
-                        --module-path ${java.home}/lib/javafx-swt.jar:${java.home}/lib/javafx.base.jar:${java.home}/lib/javafx.controls.jar:${java.home}/lib/javafx.fxml.jar:${java.home}/lib/javafx.graphics.jar:${java.home}/lib/javafx.media.jar:${java.home}/lib/javafx.swing.jar:${java.home}/lib/javafx.web.jar
-                        --add-modules javafx.controls,javafx.fxml
-                    </jvmArguments>
                 </configuration>
             </plugin>
             <plugin>
@@ -137,7 +132,19 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>com.employeemanager.JavaFxApplication</mainClass>
+                    <mainClass>com.employeemanager.EmployeeManagerApplication</mainClass>
+                    <launcher>app</launcher>
+                    <jlinkImageName>app</jlinkImageName>
+                    <jlinkZipName>app-zip</jlinkZipName>
+                    <noManPages>true</noManPages>
+                    <stripDebug>true</stripDebug>
+                    <noHeaderFiles>true</noHeaderFiles>
+                    <options>
+                        <option>--add-opens</option>
+                        <option>java.base/java.lang=ALL-UNNAMED</option>
+                        <option>--add-exports</option>
+                        <option>javafx.base/com.sun.javafx.event=ALL-UNNAMED</option>
+                    </options>
                 </configuration>
             </plugin>
         </plugins>
