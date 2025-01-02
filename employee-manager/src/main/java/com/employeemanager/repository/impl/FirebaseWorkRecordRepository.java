@@ -2,10 +2,12 @@ package com.employeemanager.repository.impl;
 
 import com.employeemanager.model.WorkRecord;
 import com.employeemanager.repository.interfaces.WorkRecordRepository;
+import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QuerySnapshot;
 import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -45,14 +47,35 @@ public class FirebaseWorkRecordRepository extends BaseFirebaseRepository<WorkRec
     @Override
     public List<WorkRecord> findByWorkDateBetween(LocalDate startDate, LocalDate endDate)
             throws ExecutionException, InterruptedException {
+        String startDateStr = startDate.format(DateTimeFormatter.ISO_DATE);
+        String endDateStr = endDate.format(DateTimeFormatter.ISO_DATE);
+
         QuerySnapshot querySnapshot = firestore.collection(collectionName)
-                .whereGreaterThanOrEqualTo("workDate", startDate)
-                .whereLessThanOrEqualTo("workDate", endDate)
+                .whereGreaterThanOrEqualTo("workDate", startDateStr)
+                .whereLessThanOrEqualTo("workDate", endDateStr)
                 .get()
                 .get();
 
         return querySnapshot.getDocuments().stream()
-                .map(doc -> doc.toObject(WorkRecord.class))
+                .map(this::convertToWorkRecord)
                 .collect(Collectors.toList());
+    }
+
+    private WorkRecord convertToWorkRecord(DocumentSnapshot document) {
+        WorkRecord record = new WorkRecord();
+        record.setId(Long.parseLong(document.getId()));
+        
+        // Dátumok konvertálása
+        String workDateStr = document.getString("workDate");
+        if (workDateStr != null) {
+            record.setWorkDate(LocalDate.parse(workDateStr, DateTimeFormatter.ISO_DATE));
+        }
+        
+        String notificationDateStr = document.getString("notificationDate");
+        if (notificationDateStr != null) {
+            record.setNotificationDate(LocalDate.parse(notificationDateStr, DateTimeFormatter.ISO_DATE));
+        }
+        
+        return record;
     }
 }

@@ -1,6 +1,7 @@
 package com.employeemanager.model;
 
-import com.employeemanager.config.LocalDateAttributeConverter;
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -22,8 +23,8 @@ public class WorkRecord {
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
     @Column(name = "notification_date", nullable = false)
-    @Convert(converter = LocalDateAttributeConverter.class)
     private LocalDate notificationDate;
 
     @Column(name = "notification_time", nullable = false)
@@ -33,8 +34,8 @@ public class WorkRecord {
     @Column(name = "ebev_serial", nullable = false)
     private String ebevSerialNumber;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
     @Column(name = "work_date", nullable = false)
-    @Convert(converter = LocalDateAttributeConverter.class)
     private LocalDate workDate;
 
     @Column(nullable = false, precision = 10, scale = 2)
