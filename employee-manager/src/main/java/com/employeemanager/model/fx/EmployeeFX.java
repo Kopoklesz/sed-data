@@ -3,6 +3,7 @@ package com.employeemanager.model.fx;
 import com.employeemanager.model.Employee;
 import javafx.beans.property.*;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 public class EmployeeFX {
     private final LongProperty id = new SimpleLongProperty();
@@ -14,15 +15,21 @@ public class EmployeeFX {
     private final StringProperty socialSecurityNumber = new SimpleStringProperty();
     private final StringProperty address = new SimpleStringProperty();
     private final ObjectProperty<LocalDate> createdAt = new SimpleObjectProperty<>();
+    private final StringProperty birthDateStr = new SimpleStringProperty();
 
-    public EmployeeFX() {
-    }
+    public EmployeeFX() {}
 
     public EmployeeFX(Employee employee) {
         setId(employee.getId());
         setName(employee.getName());
         setBirthPlace(employee.getBirthPlace());
-        setBirthDate(employee.getBirthDate());
+        if (employee.getBirthDateStr() != null) {
+            try {
+                setBirthDate(LocalDate.parse(employee.getBirthDateStr()));
+            } catch (Exception e) {
+                //log.error("Error parsing birth date: " + employee.getBirthDateStr(), e);
+            }
+        }
         setMotherName(employee.getMotherName());
         setTaxNumber(employee.getTaxNumber());
         setSocialSecurityNumber(employee.getSocialSecurityNumber());
@@ -85,8 +92,14 @@ public class EmployeeFX {
         return birthDate.get();
     }
 
-    public void setBirthDate(LocalDate birthDate) {
-        this.birthDate.set(birthDate);
+    public void setBirthDate(LocalDate date) {
+        if (date != null) {
+            this.birthDate.set(date);
+            this.birthDateStr.set(date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+        } else {
+            this.birthDate.set(null);
+            this.birthDateStr.set(null);
+        }
     }
 
     public ObjectProperty<LocalDate> birthDateProperty() {
@@ -155,5 +168,25 @@ public class EmployeeFX {
 
     protected void onCreate() {
         setCreatedAt(LocalDate.now());
+    }
+
+    public String getBirthDateStr() {
+        return birthDateStr.get();
+    }
+
+    public void setBirthDateStr(String dateStr) {
+        if (dateStr != null && !dateStr.isEmpty()) {
+            try {
+                LocalDate date = LocalDate.parse(dateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                this.birthDate.set(date);
+                this.birthDateStr.set(dateStr);
+            } catch (Exception e) {
+               //log.error("Error parsing birth date string: " + dateStr, e);
+            }
+        }
+    }
+
+    public StringProperty birthDateStrProperty() {
+        return birthDateStr;
     }
 }

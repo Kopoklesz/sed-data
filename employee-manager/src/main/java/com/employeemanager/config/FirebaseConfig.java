@@ -1,8 +1,5 @@
 package com.employeemanager.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
@@ -17,9 +14,14 @@ import org.springframework.core.io.ResourceLoader;
 import java.io.IOException;
 @Configuration
 public class FirebaseConfig {
-
     @Value("${firebase.service-account.path}")
     private String serviceAccountPath;
+    
+    @Value("${firebase.database.url}")
+    private String databaseUrl;
+    
+    @Value("${firebase.project.id}")
+    private String projectId;
 
     private final ResourceLoader resourceLoader;
 
@@ -37,8 +39,10 @@ public class FirebaseConfig {
             }
 
             FirebaseOptions options = FirebaseOptions.builder()
-                    .setCredentials(GoogleCredentials.fromStream(serviceAccount.getInputStream()))
-                    .build();
+                .setCredentials(GoogleCredentials.fromStream(serviceAccount.getInputStream()))
+                .setProjectId(projectId)
+                .setDatabaseUrl(databaseUrl)
+                .build();
 
             if (FirebaseApp.getApps().isEmpty()) {
                 FirebaseApp.initializeApp(options);
@@ -48,13 +52,5 @@ public class FirebaseConfig {
         } catch (IOException e) {
             throw new IOException("Failed to initialize Firebase: " + e.getMessage(), e);
         }
-    }
-
-    @Bean
-    public ObjectMapper objectMapper() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        return mapper;
     }
 }
