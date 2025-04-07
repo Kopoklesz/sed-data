@@ -1,5 +1,6 @@
 package com.employeemanager.repository.impl;
 
+import com.employeemanager.model.Employee;
 import com.employeemanager.repository.interfaces.BaseRepository;
 import com.google.cloud.firestore.*;
 import java.util.ArrayList;
@@ -21,14 +22,14 @@ public abstract class BaseFirebaseRepository<T> implements BaseRepository<T, Str
 
     @Override
     public T save(T entity) throws ExecutionException, InterruptedException {
-        String id = getEntityId(entity);
+        String id = getEntityId((Employee) entity);
         if (id == null) {
             DocumentReference docRef = firestore.collection(collectionName).document();
-            setEntityId(entity, docRef.getId());
+            setEntityId((Employee) entity, docRef.getId());
         }
 
         firestore.collection(collectionName)
-                .document(getEntityId(entity))
+                .document(getEntityId((Employee) entity))
                 .set(entity)
                 .get();
 
@@ -41,12 +42,12 @@ public abstract class BaseFirebaseRepository<T> implements BaseRepository<T, Str
         List<T> savedEntities = new ArrayList<>();
 
         for (T entity : entities) {
-            String id = getEntityId(entity);
+            String id = getEntityId((Employee) entity);
             if (id == null) {
                 DocumentReference docRef = firestore.collection(collectionName).document();
-                setEntityId(entity, docRef.getId());
+                setEntityId((Employee) entity, docRef.getId());
             }
-            DocumentReference docRef = firestore.collection(collectionName).document(getEntityId(entity));
+            DocumentReference docRef = firestore.collection(collectionName).document(getEntityId((Employee) entity));
             batch.set(docRef, entity);
             savedEntities.add(entity);
         }
@@ -81,6 +82,12 @@ public abstract class BaseFirebaseRepository<T> implements BaseRepository<T, Str
                 .get();
     }
 
-    protected abstract String getEntityId(T entity);
-    protected abstract void setEntityId(T entity, String id);
+    protected String getEntityId(Employee employee) {
+        return employee.getId() != null ? employee.getId().toString() : null;
+    }
+    protected void setEntityId(Employee employee, String id) {
+        if (employee.getId() == null) {
+            employee.setId(System.currentTimeMillis());
+        }
+    }
 }

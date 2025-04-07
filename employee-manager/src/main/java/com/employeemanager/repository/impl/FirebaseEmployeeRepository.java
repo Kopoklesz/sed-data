@@ -87,12 +87,16 @@ public class FirebaseEmployeeRepository extends BaseFirebaseRepository<Employee>
 
     @Override
     public Employee save(Employee employee) throws ExecutionException, InterruptedException {
-        // Győződjünk meg, hogy a dátum-stringek be vannak állítva
+        // Dátum-stringek beállítása
         if (employee.getBirthDate() != null && (employee.getBirthDateStr() == null || employee.getBirthDateStr().isEmpty())) {
             employee.setBirthDateStr(DateUtil.formatDate(employee.getBirthDate()));
         }
 
-        if (employee.getCreatedAt() != null && (employee.getCreatedAtStr() == null || employee.getCreatedAtStr().isEmpty())) {
+        if (employee.getCreatedAt() == null) {
+            employee.setCreatedAt(LocalDate.now());
+        }
+
+        if (employee.getCreatedAtStr() == null || employee.getCreatedAtStr().isEmpty()) {
             employee.setCreatedAtStr(DateUtil.formatDate(employee.getCreatedAt()));
         }
 
@@ -107,20 +111,20 @@ public class FirebaseEmployeeRepository extends BaseFirebaseRepository<Employee>
         employeeData.put("address", employee.getAddress());
         employeeData.put("createdAtStr", employee.getCreatedAtStr());
 
-        // ID kezelése
-        String id = getEntityId(employee);
-        if (id == null) {
-            DocumentReference docRef = firestore.collection(collectionName).document();
-            id = docRef.getId();
-            setEntityId(employee, id);
+        DocumentReference docRef;
+        if (employee.getId() == null) {
+            docRef = firestore.collection(collectionName).document();
+            Long newId = Long.parseLong(docRef.getId());
+            employee.setId(newId);
+            employeeData.put("id", newId);
+        } else {
+            docRef = firestore.collection(collectionName).document(employee.getId().toString());
+            employeeData.put("id", employee.getId());
         }
 
-        // Adatok mentése
-        firestore.collection(collectionName)
-                .document(id)
-                .set(employeeData)
-                .get();
+        docRef.set(employeeData).get();
 
+        log.debug("Employee saved with ID: {}", employee.getId());
         return employee;
     }
 }

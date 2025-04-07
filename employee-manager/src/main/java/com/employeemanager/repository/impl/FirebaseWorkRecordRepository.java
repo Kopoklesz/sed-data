@@ -31,16 +31,6 @@ public class FirebaseWorkRecordRepository extends BaseFirebaseRepository<WorkRec
     }
 
     @Override
-    protected String getEntityId(WorkRecord workRecord) {
-        return workRecord.getId() != null ? workRecord.getId().toString() : null;
-    }
-
-    @Override
-    protected void setEntityId(WorkRecord workRecord, String id) {
-        workRecord.setId(Long.valueOf(id));
-    }
-
-    @Override
     public List<WorkRecord> findByEmployeeIdAndWorkDateBetween(String employeeId, LocalDate startDate, LocalDate endDate)
             throws ExecutionException, InterruptedException {
         QuerySnapshot querySnapshot = firestore.collection(collectionName)
