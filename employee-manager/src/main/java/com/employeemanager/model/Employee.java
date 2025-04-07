@@ -1,13 +1,16 @@
 package com.employeemanager.model;
 
 import com.employeemanager.config.LocalDateAttributeConverter;
+import com.employeemanager.util.DateUtil;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "employees")
@@ -56,56 +59,39 @@ public class Employee {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDate.now();
-        createdAtStr = createdAt.format(DATE_FORMATTER);
-        
-        if (birthDate != null) {
+        if (createdAt == null) {
+            createdAt = LocalDate.now();
+        }
+        if (createdAt != null && (createdAtStr == null || createdAtStr.isEmpty())) {
+            createdAtStr = createdAt.format(DATE_FORMATTER);
+        }
+
+        if (birthDate != null && (birthDateStr == null || birthDateStr.isEmpty())) {
             birthDateStr = birthDate.format(DATE_FORMATTER);
         }
     }
 
     public String getBirthDateStr() {
-        if (birthDateStr == null && birthDate != null) {
-            birthDateStr = birthDate.format(DATE_FORMATTER);
-        }
         return birthDateStr;
     }
 
     public void setBirthDateStr(String dateStr) {
         this.birthDateStr = dateStr;
-        if (dateStr != null && !dateStr.isEmpty()) {
-            try {
-                this.birthDate = LocalDate.parse(dateStr, DATE_FORMATTER);
-            } catch (Exception e) {
-                // Log error ha szükséges
-            }
-        }
+        // Ne állítsuk be automatikusan a birthDate-et
     }
 
     public void setBirthDate(LocalDate date) {
         this.birthDate = date;
         if (date != null) {
             this.birthDateStr = date.format(DATE_FORMATTER);
-        } else {
-            this.birthDateStr = null;
         }
     }
 
     public void setCreatedAtStr(String dateStr) {
         this.createdAtStr = dateStr;
-        if (dateStr != null && !dateStr.isEmpty()) {
-            try {
-                this.createdAt = LocalDate.parse(dateStr, DATE_FORMATTER);
-            } catch (Exception e) {
-                // Log error ha szükséges
-            }
-        }
     }
 
     public String getCreatedAtStr() {
-        if (createdAtStr == null && createdAt != null) {
-            createdAtStr = createdAt.format(DATE_FORMATTER);
-        }
         return createdAtStr;
     }
 
@@ -113,8 +99,19 @@ public class Employee {
         this.createdAt = date;
         if (date != null) {
             this.createdAtStr = date.format(DATE_FORMATTER);
-        } else {
-            this.createdAtStr = null;
         }
+    }
+
+    public Map<String, Object> toMap() {
+        Map<String, Object> map = new HashMap<>();
+        map.put("name", name);
+        map.put("birthPlace", birthPlace);
+        map.put("birthDateStr", birthDateStr);
+        map.put("motherName", motherName);
+        map.put("taxNumber", taxNumber);
+        map.put("socialSecurityNumber", socialSecurityNumber);
+        map.put("address", address);
+        map.put("createdAtStr", createdAtStr);
+        return map;
     }
 }

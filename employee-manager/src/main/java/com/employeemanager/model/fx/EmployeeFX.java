@@ -1,6 +1,7 @@
 package com.employeemanager.model.fx;
 
 import com.employeemanager.model.Employee;
+import com.employeemanager.util.DateUtil;
 import javafx.beans.property.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -23,13 +24,7 @@ public class EmployeeFX {
         setId(employee.getId());
         setName(employee.getName());
         setBirthPlace(employee.getBirthPlace());
-        if (employee.getBirthDateStr() != null) {
-            try {
-                setBirthDate(LocalDate.parse(employee.getBirthDateStr()));
-            } catch (Exception e) {
-                //log.error("Error parsing birth date: " + employee.getBirthDateStr(), e);
-            }
-        }
+        setBirthDate(employee.getBirthDate());
         setMotherName(employee.getMotherName());
         setTaxNumber(employee.getTaxNumber());
         setSocialSecurityNumber(employee.getSocialSecurityNumber());
@@ -93,13 +88,8 @@ public class EmployeeFX {
     }
 
     public void setBirthDate(LocalDate date) {
-        if (date != null) {
-            this.birthDate.set(date);
-            this.birthDateStr.set(date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-        } else {
-            this.birthDate.set(null);
-            this.birthDateStr.set(null);
-        }
+        this.birthDate.set(date);
+        this.birthDateStr.set(DateUtil.formatDate(date));
     }
 
     public ObjectProperty<LocalDate> birthDateProperty() {
@@ -175,15 +165,8 @@ public class EmployeeFX {
     }
 
     public void setBirthDateStr(String dateStr) {
-        if (dateStr != null && !dateStr.isEmpty()) {
-            try {
-                LocalDate date = LocalDate.parse(dateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-                this.birthDate.set(date);
-                this.birthDateStr.set(dateStr);
-            } catch (Exception e) {
-               //log.error("Error parsing birth date string: " + dateStr, e);
-            }
-        }
+        this.birthDateStr.set(dateStr);
+        DateUtil.parseDate(dateStr).ifPresent(date -> this.birthDate.set(date));
     }
 
     public StringProperty birthDateStrProperty() {

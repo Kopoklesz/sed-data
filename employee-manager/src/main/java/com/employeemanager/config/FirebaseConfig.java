@@ -22,13 +22,10 @@ public class FirebaseConfig {
     
     @Value("${firebase.project.id}")
     private String projectId;
-
     private final ResourceLoader resourceLoader;
-
     public FirebaseConfig(ResourceLoader resourceLoader) {
         this.resourceLoader = resourceLoader;
     }
-
     @Bean
     public Firestore firestore() throws IOException {
         try {
@@ -52,5 +49,16 @@ public class FirebaseConfig {
         } catch (IOException e) {
             throw new IOException("Failed to initialize Firebase: " + e.getMessage(), e);
         }
+    }
+    @Bean
+    public ObjectMapper objectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        // Kikapcsoljuk a típus információ használatát, ami problémákat okozhat
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        // Hozzáadjuk a Java 8 dátum modul támogatást
+        mapper.registerModule(new JavaTimeModule());
+        // Egyszerű dátum formátumot használunk
+        mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd"));
+        return mapper;
     }
 }
