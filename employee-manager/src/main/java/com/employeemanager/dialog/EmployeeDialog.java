@@ -164,9 +164,6 @@ public class EmployeeDialog extends Dialog<EmployeeFX> {
 
         LocalDate birthDate = birthDatePicker.getValue();
         result.setBirthDate(birthDate);
-        if (birthDate != null) {
-            result.setBirthDateStr(birthDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-        }
 
         result.setMotherName(motherNameField.getText());
         result.setTaxNumber(taxNumberField.getText());
@@ -176,10 +173,11 @@ public class EmployeeDialog extends Dialog<EmployeeFX> {
         if (employee.getId() == null) {
             LocalDate now = LocalDate.now();
             result.setCreatedAt(now);
-            result.setCreatedAtStr(now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
         } else {
             result.setCreatedAt(employee.getCreatedAt());
-            result.setCreatedAtStr(employee.getCreatedAtStr());
+            if (employee.getCreatedAtStr() != null) {
+                result.setCreatedAtStr(employee.getCreatedAtStr());
+            }
         }
 
         return result;

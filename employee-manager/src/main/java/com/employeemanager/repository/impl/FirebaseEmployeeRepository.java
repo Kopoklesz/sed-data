@@ -68,9 +68,8 @@ public class FirebaseEmployeeRepository extends BaseFirebaseRepository<Employee>
         employee.setBirthPlace(document.getString("birthPlace"));
 
         String birthDateStr = document.getString("birthDateStr");
-        if (birthDateStr != null && !birthDateStr.isEmpty()) {
-            DateUtil.parseDate(birthDateStr).ifPresent(employee::setBirthDate);
-        }
+        employee.setBirthDateStr(birthDateStr);
+        DateUtil.parseDate(birthDateStr).ifPresent(employee::setBirthDate);
 
         employee.setMotherName(document.getString("motherName"));
         employee.setTaxNumber(document.getString("taxNumber"));
@@ -88,13 +87,16 @@ public class FirebaseEmployeeRepository extends BaseFirebaseRepository<Employee>
 
     @Override
     public Employee save(Employee employee) throws ExecutionException, InterruptedException {
+        // Győződjünk meg, hogy a dátum-stringek be vannak állítva
         if (employee.getBirthDate() != null && (employee.getBirthDateStr() == null || employee.getBirthDateStr().isEmpty())) {
-            employee.setBirthDateStr(employee.getBirthDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-        }
-        if (employee.getCreatedAt() != null && (employee.getCreatedAtStr() == null || employee.getCreatedAtStr().isEmpty())) {
-            employee.setCreatedAtStr(employee.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            employee.setBirthDateStr(DateUtil.formatDate(employee.getBirthDate()));
         }
 
+        if (employee.getCreatedAt() != null && (employee.getCreatedAtStr() == null || employee.getCreatedAtStr().isEmpty())) {
+            employee.setCreatedAtStr(DateUtil.formatDate(employee.getCreatedAt()));
+        }
+
+        // Map létrehozása az adatok mentéséhez
         Map<String, Object> employeeData = new HashMap<>();
         employeeData.put("name", employee.getName());
         employeeData.put("birthPlace", employee.getBirthPlace());
@@ -105,6 +107,7 @@ public class FirebaseEmployeeRepository extends BaseFirebaseRepository<Employee>
         employeeData.put("address", employee.getAddress());
         employeeData.put("createdAtStr", employee.getCreatedAtStr());
 
+        // ID kezelése
         String id = getEntityId(employee);
         if (id == null) {
             DocumentReference docRef = firestore.collection(collectionName).document();
@@ -112,6 +115,7 @@ public class FirebaseEmployeeRepository extends BaseFirebaseRepository<Employee>
             setEntityId(employee, id);
         }
 
+        // Adatok mentése
         firestore.collection(collectionName)
                 .document(id)
                 .set(employeeData)

@@ -11,6 +11,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import java.text.SimpleDateFormat;
+
 import java.io.IOException;
 @Configuration
 public class FirebaseConfig {
@@ -53,11 +58,8 @@ public class FirebaseConfig {
     @Bean
     public ObjectMapper objectMapper() {
         ObjectMapper mapper = new ObjectMapper();
-        // Kikapcsoljuk a típus információ használatát, ami problémákat okozhat
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        // Hozzáadjuk a Java 8 dátum modul támogatást
         mapper.registerModule(new JavaTimeModule());
-        // Egyszerű dátum formátumot használunk
         mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd"));
         return mapper;
     }

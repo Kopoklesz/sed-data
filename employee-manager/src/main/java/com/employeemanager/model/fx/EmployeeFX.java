@@ -17,6 +17,7 @@ public class EmployeeFX {
     private final StringProperty address = new SimpleStringProperty();
     private final ObjectProperty<LocalDate> createdAt = new SimpleObjectProperty<>();
     private final StringProperty birthDateStr = new SimpleStringProperty();
+    private final StringProperty createdAtStr = new SimpleStringProperty();
 
     public EmployeeFX() {}
 
@@ -171,5 +172,15 @@ public class EmployeeFX {
 
     public StringProperty birthDateStrProperty() {
         return birthDateStr;
+    }
+
+    public void setCreatedAtStr(String dateStr) {
+        DateUtil.parseDate(dateStr).ifPresent(date -> {
+            this.createdAt.set(date);
+        });
+    }
+
+    public String getCreatedAtStr() {
+        return createdAtStr.get();
     }
 }

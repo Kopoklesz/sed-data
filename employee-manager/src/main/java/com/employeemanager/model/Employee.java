@@ -62,12 +62,13 @@ public class Employee {
         if (createdAt == null) {
             createdAt = LocalDate.now();
         }
-        if (createdAt != null && (createdAtStr == null || createdAtStr.isEmpty())) {
-            createdAtStr = createdAt.format(DATE_FORMATTER);
+
+        if (createdAt != null) {
+            createdAtStr = DateUtil.formatDate(createdAt);
         }
 
-        if (birthDate != null && (birthDateStr == null || birthDateStr.isEmpty())) {
-            birthDateStr = birthDate.format(DATE_FORMATTER);
+        if (birthDate != null) {
+            birthDateStr = DateUtil.formatDate(birthDate);
         }
     }
 
@@ -83,7 +84,9 @@ public class Employee {
     public void setBirthDate(LocalDate date) {
         this.birthDate = date;
         if (date != null) {
-            this.birthDateStr = date.format(DATE_FORMATTER);
+            this.birthDateStr = DateUtil.formatDate(date);
+        } else {
+            this.birthDateStr = null;
         }
     }
 
@@ -98,7 +101,9 @@ public class Employee {
     public void setCreatedAt(LocalDate date) {
         this.createdAt = date;
         if (date != null) {
-            this.createdAtStr = date.format(DATE_FORMATTER);
+            this.createdAtStr = DateUtil.formatDate(date);
+        } else {
+            this.createdAtStr = null;
         }
     }
 
