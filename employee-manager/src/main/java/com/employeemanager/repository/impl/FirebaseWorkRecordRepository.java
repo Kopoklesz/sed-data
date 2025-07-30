@@ -58,18 +58,20 @@ public class FirebaseWorkRecordRepository extends BaseFirebaseRepository<WorkRec
                 try {
                     employeeRepository.findById(employeeId).ifPresent(record::setEmployee);
                 } catch (Exception e) {
-                    log.error("Error loading employee with ID: {}", employeeId, e);
+                    log.warn("Could not load full employee data for ID: {}, using minimal data", employeeId);
                     // Minimális employee adatok beállítása
                     Employee employee = new Employee();
                     employee.setId(employeeId);
                     employee.setName((String) data.get("employeeName"));
                     record.setEmployee(employee);
                 }
+            } else {
+                log.warn("WorkRecord without employeeId found: {}", data.get("id"));
             }
 
             return record;
         } catch (Exception e) {
-            log.error("Error converting map to WorkRecord: {}", e.getMessage(), e);
+            log.error("Error converting map to WorkRecord. Data: {}", data, e);
             return null;
         }
     }
@@ -81,25 +83,43 @@ public class FirebaseWorkRecordRepository extends BaseFirebaseRepository<WorkRec
         String startDateStr = FirebaseDateConverter.dateToString(startDate);
         String endDateStr = FirebaseDateConverter.dateToString(endDate);
 
-        QuerySnapshot querySnapshot = firestore.collection(collectionName)
-                .whereEqualTo("employeeId", employeeId)
-                .whereGreaterThanOrEqualTo("workDate", startDateStr)
-                .whereLessThanOrEqualTo("workDate", endDateStr)
-                .orderBy("workDate", Query.Direction.DESCENDING)
-                .get()
-                .get();
+        try {
+            // Először csak az employeeId alapján szűrünk, majd Java-ban szűrjük a dátumokat
+            QuerySnapshot querySnapshot = firestore.collection(collectionName)
+                    .whereEqualTo("employeeId", employeeId)
+                    .get()
+                    .get();
 
-        return querySnapshot.getDocuments().stream()
-                .map(doc -> {
-                    Map<String, Object> data = doc.getData();
-                    if (data != null) {
-                        data.put("id", doc.getId());
-                        return convertFromMap(data);
-                    }
-                    return null;
-                })
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+            return querySnapshot.getDocuments().stream()
+                    .map(doc -> {
+                        Map<String, Object> data = doc.getData();
+                        if (data != null) {
+                            data.put("id", doc.getId());
+                            return convertFromMap(data);
+                        }
+                        return null;
+                    })
+                    .filter(Objects::nonNull)
+                    .filter(record -> {
+                        // Szűrés dátum alapján Java oldalon
+                        LocalDate workDate = record.getWorkDate();
+                        return workDate != null &&
+                                !workDate.isBefore(startDate) &&
+                                !workDate.isAfter(endDate);
+                    })
+                    .sorted((r1, r2) -> {
+                        // Rendezés dátum szerint (csökkenő)
+                        LocalDate d1 = r1.getWorkDate();
+                        LocalDate d2 = r2.getWorkDate();
+                        if (d1 == null) return 1;
+                        if (d2 == null) return -1;
+                        return d2.compareTo(d1);
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error fetching work records for employee {}: {}", employeeId, e.getMessage(), e);
+            throw new ExecutionException("Failed to fetch work records", e);
+        }
     }
 
     @Override
@@ -111,23 +131,41 @@ public class FirebaseWorkRecordRepository extends BaseFirebaseRepository<WorkRec
 
         log.debug("Querying work records between {} and {}", startDateStr, endDateStr);
 
-        QuerySnapshot querySnapshot = firestore.collection(collectionName)
-                .whereGreaterThanOrEqualTo("workDate", startDateStr)
-                .whereLessThanOrEqualTo("workDate", endDateStr)
-                .orderBy("workDate", Query.Direction.DESCENDING)
-                .get()
-                .get();
+        try {
+            // Egyszerű lekérdezés index nélkül
+            QuerySnapshot querySnapshot = firestore.collection(collectionName)
+                    .get()
+                    .get();
 
-        return querySnapshot.getDocuments().stream()
-                .map(doc -> {
-                    Map<String, Object> data = doc.getData();
-                    if (data != null) {
-                        data.put("id", doc.getId());
-                        return convertFromMap(data);
-                    }
-                    return null;
-                })
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+            return querySnapshot.getDocuments().stream()
+                    .map(doc -> {
+                        Map<String, Object> data = doc.getData();
+                        if (data != null) {
+                            data.put("id", doc.getId());
+                            return convertFromMap(data);
+                        }
+                        return null;
+                    })
+                    .filter(Objects::nonNull)
+                    .filter(record -> {
+                        // Szűrés dátum alapján Java oldalon
+                        LocalDate workDate = record.getWorkDate();
+                        return workDate != null &&
+                                !workDate.isBefore(startDate) &&
+                                !workDate.isAfter(endDate);
+                    })
+                    .sorted((r1, r2) -> {
+                        // Rendezés dátum szerint (csökkenő)
+                        LocalDate d1 = r1.getWorkDate();
+                        LocalDate d2 = r2.getWorkDate();
+                        if (d1 == null) return 1;
+                        if (d2 == null) return -1;
+                        return d2.compareTo(d1);
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error fetching work records between dates: {}", e.getMessage(), e);
+            throw new ExecutionException("Failed to fetch work records", e);
+        }
     }
 }
