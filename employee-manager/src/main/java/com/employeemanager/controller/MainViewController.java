@@ -112,9 +112,20 @@ public class MainViewController implements Initializable {
             }
         });
 
-        employeeTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
-            if (newSelection != null) {
-                loadEmployeeWorkRecords(newSelection);
+        // Dupla kattintás esemény - váltás a munkanaplók tab-ra
+        employeeTable.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2 && !employeeTable.getSelectionModel().isEmpty()) {
+                EmployeeFX selectedEmployee = employeeTable.getSelectionModel().getSelectedItem();
+                if (selectedEmployee != null) {
+                    // Betöltjük a munkanaplókat
+                    loadEmployeeWorkRecords(selectedEmployee);
+                    // Átváltunk a Havi nyilvántartás tab-ra
+                    TabPane tabPane = (TabPane) employeeTable.getScene().lookup(".tab-pane");
+                    if (tabPane != null) {
+                        tabPane.getSelectionModel().select(1); // 1 = Havi nyilvántartás tab
+                    }
+                    updateStatus("Megjelenítve: " + selectedEmployee.getName() + " munkanaplói");
+                }
             }
         });
     }
