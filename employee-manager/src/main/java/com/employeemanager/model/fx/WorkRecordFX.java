@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public class WorkRecordFX {
-    private final LongProperty id = new SimpleLongProperty();
+    private final StringProperty id = new SimpleStringProperty();
     private final StringProperty employeeName = new SimpleStringProperty();
     private final ObjectProperty<LocalDate> notificationDate = new SimpleObjectProperty<>();
     private final ObjectProperty<LocalDateTime> notificationTime = new SimpleObjectProperty<>();
@@ -24,6 +24,9 @@ public class WorkRecordFX {
     private WorkRecord originalRecord;
 
     public WorkRecordFX() {
+        // Új munkanapló esetén beállítjuk az alapértelmezett értékeket
+        setNotificationDate(LocalDate.now());
+        setNotificationTime(LocalDateTime.now());
     }
 
     public WorkRecordFX(WorkRecord record) {
@@ -31,7 +34,7 @@ public class WorkRecordFX {
         this.employee = record.getEmployee();
 
         setId(record.getId());
-        setEmployeeName(record.getEmployee().getName());
+        setEmployeeName(record.getEmployee() != null ? record.getEmployee().getName() : "");
         setNotificationDate(record.getNotificationDate());
         setNotificationTime(record.getNotificationTime());
         setEbevSerialNumber(record.getEbevSerialNumber());
@@ -59,15 +62,17 @@ public class WorkRecordFX {
             setEmployeeName(employee.getName());
         }
     }
-    public Long getId() {
+
+    // Getter/Setter és Property metódusok
+    public String getId() {
         return id.get();
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id.set(id);
     }
 
-    public LongProperty idProperty() {
+    public StringProperty idProperty() {
         return id;
     }
 

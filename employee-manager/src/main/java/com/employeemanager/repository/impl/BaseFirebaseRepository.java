@@ -2,12 +2,16 @@ package com.employeemanager.repository.impl;
 
 import com.employeemanager.repository.interfaces.BaseRepository;
 import com.google.cloud.firestore.*;
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
+@Slf4j
 public abstract class BaseFirebaseRepository<T> implements BaseRepository<T, String> {
     protected final Firestore firestore;
     protected final String collectionName;
@@ -22,15 +26,22 @@ public abstract class BaseFirebaseRepository<T> implements BaseRepository<T, Str
     @Override
     public T save(T entity) throws ExecutionException, InterruptedException {
         String id = getEntityId(entity);
-        if (id == null) {
-            DocumentReference docRef = firestore.collection(collectionName).document();
+        DocumentReference docRef;
+
+        if (id == null || id.isEmpty()) {
+            // Új entitás - Firebase generálja az ID-t
+            docRef = firestore.collection(collectionName).document();
             setEntityId(entity, docRef.getId());
+            log.debug("Generated new ID: {} for collection: {}", docRef.getId(), collectionName);
+        } else {
+            // Meglévő entitás
+            docRef = firestore.collection(collectionName).document(id);
+            log.debug("Updating existing entity with ID: {} in collection: {}", id, collectionName);
         }
 
-        firestore.collection(collectionName)
-                .document(getEntityId(entity))
-                .set(entity)
-                .get();
+        // Entitás konvertálása Map-re a mentéshez
+        Map<String, Object> data = convertToMap(entity);
+        docRef.set(data).get();
 
         return entity;
     }
@@ -42,16 +53,22 @@ public abstract class BaseFirebaseRepository<T> implements BaseRepository<T, Str
 
         for (T entity : entities) {
             String id = getEntityId(entity);
-            if (id == null) {
-                DocumentReference docRef = firestore.collection(collectionName).document();
+            DocumentReference docRef;
+
+            if (id == null || id.isEmpty()) {
+                docRef = firestore.collection(collectionName).document();
                 setEntityId(entity, docRef.getId());
+            } else {
+                docRef = firestore.collection(collectionName).document(id);
             }
-            DocumentReference docRef = firestore.collection(collectionName).document(getEntityId(entity));
-            batch.set(docRef, entity);
+
+            Map<String, Object> data = convertToMap(entity);
+            batch.set(docRef, data);
             savedEntities.add(entity);
         }
 
         batch.commit().get();
+        log.debug("Batch saved {} entities to collection: {}", savedEntities.size(), collectionName);
         return savedEntities;
     }
 
@@ -62,14 +79,31 @@ public abstract class BaseFirebaseRepository<T> implements BaseRepository<T, Str
                 .get()
                 .get();
 
-        return Optional.ofNullable(document.exists() ? document.toObject(entityClass) : null);
+        if (document.exists()) {
+            Map<String, Object> data = document.getData();
+            if (data != null) {
+                data.put("id", document.getId()); // Ensure ID is included
+                return Optional.ofNullable(convertFromMap(data));
+            }
+        }
+
+        return Optional.empty();
     }
 
     @Override
     public List<T> findAll() throws ExecutionException, InterruptedException {
         QuerySnapshot querySnapshot = firestore.collection(collectionName).get().get();
+
         return querySnapshot.getDocuments().stream()
-                .map(doc -> doc.toObject(entityClass))
+                .map(doc -> {
+                    Map<String, Object> data = doc.getData();
+                    if (data != null) {
+                        data.put("id", doc.getId()); // Ensure ID is included
+                        return convertFromMap(data);
+                    }
+                    return null;
+                })
+                .filter(entity -> entity != null)
                 .collect(Collectors.toList());
     }
 
@@ -79,8 +113,26 @@ public abstract class BaseFirebaseRepository<T> implements BaseRepository<T, Str
                 .document(id)
                 .delete()
                 .get();
+        log.debug("Deleted entity with ID: {} from collection: {}", id, collectionName);
     }
 
+    /**
+     * Get entity ID - to be implemented by subclasses
+     */
     protected abstract String getEntityId(T entity);
+
+    /**
+     * Set entity ID - to be implemented by subclasses
+     */
     protected abstract void setEntityId(T entity, String id);
+
+    /**
+     * Convert entity to Map for Firebase storage
+     */
+    protected abstract Map<String, Object> convertToMap(T entity);
+
+    /**
+     * Convert Map from Firebase to entity
+     */
+    protected abstract T convertFromMap(Map<String, Object> data);
 }

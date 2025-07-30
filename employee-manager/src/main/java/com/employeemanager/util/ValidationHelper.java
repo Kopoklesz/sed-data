@@ -10,7 +10,7 @@ public class ValidationHelper {
 
     private static final Pattern TAX_NUMBER_PATTERN = Pattern.compile("\\d{10}");
     private static final Pattern SOCIAL_SECURITY_PATTERN = Pattern.compile("\\d{9}");
-    private static final Pattern EBEV_SERIAL_PATTERN = Pattern.compile("[A-Z0-9]{10}");
+    private static final Pattern EBEV_SERIAL_PATTERN = Pattern.compile("\\d{2,}");
 
     public static boolean isValidTaxNumber(String taxNumber) {
         // Null check hozzáadása

@@ -1,24 +1,23 @@
 package com.employeemanager.model;
 
-import com.employeemanager.config.LocalDateAttributeConverter;
+import com.employeemanager.util.FirebaseDateConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "employees")
 @Data
 @NoArgsConstructor
 public class Employee {
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id; // Firebase ID-k String típusúak
 
     @Column(nullable = false)
     private String name;
@@ -26,12 +25,8 @@ public class Employee {
     @Column(name = "birth_place")
     private String birthPlace;
 
-    @Column(name = "birth_date")
-    @Convert(converter = LocalDateAttributeConverter.class)
+    @Transient
     private LocalDate birthDate;
-
-    @Column(name = "birth_date_str")
-    private String birthDateStr;
 
     @Column(name = "mother_name")
     private String motherName;
@@ -44,77 +39,50 @@ public class Employee {
 
     private String address;
 
-    @Column(name = "created_at")
-    @Temporal(TemporalType.DATE)
+    @Transient
     private LocalDate createdAt;
-
-    @Column(name = "created_at_str")
-    private String createdAtStr;
 
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL)
     private List<WorkRecord> workRecords = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDate.now();
-        createdAtStr = createdAt.format(DATE_FORMATTER);
-        
-        if (birthDate != null) {
-            birthDateStr = birthDate.format(DATE_FORMATTER);
+        if (createdAt == null) {
+            createdAt = LocalDate.now();
         }
     }
 
-    public String getBirthDateStr() {
-        if (birthDateStr == null && birthDate != null) {
-            birthDateStr = birthDate.format(DATE_FORMATTER);
-        }
-        return birthDateStr;
+    /**
+     * Firebase számára Map formátumba konvertál
+     */
+    public Map<String, Object> toMap() {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", id);
+        map.put("name", name);
+        map.put("birthPlace", birthPlace);
+        map.put("birthDate", FirebaseDateConverter.dateToString(birthDate));
+        map.put("motherName", motherName);
+        map.put("taxNumber", taxNumber);
+        map.put("socialSecurityNumber", socialSecurityNumber);
+        map.put("address", address);
+        map.put("createdAt", FirebaseDateConverter.dateToString(createdAt));
+        return map;
     }
 
-    public void setBirthDateStr(String dateStr) {
-        this.birthDateStr = dateStr;
-        if (dateStr != null && !dateStr.isEmpty()) {
-            try {
-                this.birthDate = LocalDate.parse(dateStr, DATE_FORMATTER);
-            } catch (Exception e) {
-                // Log error ha szükséges
-            }
-        }
-    }
-
-    public void setBirthDate(LocalDate date) {
-        this.birthDate = date;
-        if (date != null) {
-            this.birthDateStr = date.format(DATE_FORMATTER);
-        } else {
-            this.birthDateStr = null;
-        }
-    }
-
-    public void setCreatedAtStr(String dateStr) {
-        this.createdAtStr = dateStr;
-        if (dateStr != null && !dateStr.isEmpty()) {
-            try {
-                this.createdAt = LocalDate.parse(dateStr, DATE_FORMATTER);
-            } catch (Exception e) {
-                // Log error ha szükséges
-            }
-        }
-    }
-
-    public String getCreatedAtStr() {
-        if (createdAtStr == null && createdAt != null) {
-            createdAtStr = createdAt.format(DATE_FORMATTER);
-        }
-        return createdAtStr;
-    }
-
-    public void setCreatedAt(LocalDate date) {
-        this.createdAt = date;
-        if (date != null) {
-            this.createdAtStr = date.format(DATE_FORMATTER);
-        } else {
-            this.createdAtStr = null;
-        }
+    /**
+     * Firebase Map-ből objektummá konvertál
+     */
+    public static Employee fromMap(Map<String, Object> map) {
+        Employee employee = new Employee();
+        employee.setId((String) map.get("id"));
+        employee.setName((String) map.get("name"));
+        employee.setBirthPlace((String) map.get("birthPlace"));
+        employee.setBirthDate(FirebaseDateConverter.stringToDate((String) map.get("birthDate")));
+        employee.setMotherName((String) map.get("motherName"));
+        employee.setTaxNumber((String) map.get("taxNumber"));
+        employee.setSocialSecurityNumber((String) map.get("socialSecurityNumber"));
+        employee.setAddress((String) map.get("address"));
+        employee.setCreatedAt(FirebaseDateConverter.stringToDate((String) map.get("createdAt")));
+        return employee;
     }
 }

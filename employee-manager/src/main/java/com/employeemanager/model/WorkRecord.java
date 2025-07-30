@@ -1,7 +1,6 @@
 package com.employeemanager.model;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-
+import com.employeemanager.util.FirebaseDateConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,33 +8,32 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @Data
 @NoArgsConstructor
 @Entity
 @Table(name = "work_records")
 public class WorkRecord {
+
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id; // Firebase ID-k String típusúak
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    @Column(name = "notification_date", nullable = false)
+    @Transient
     private LocalDate notificationDate;
 
-    @Column(name = "notification_time", nullable = false)
-    @Temporal(TemporalType.TIMESTAMP)
+    @Transient
     private LocalDateTime notificationTime;
 
     @Column(name = "ebev_serial", nullable = false)
     private String ebevSerialNumber;
 
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    @Column(name = "work_date", nullable = false)
+    @Transient
     private LocalDate workDate;
 
     @Column(nullable = false, precision = 10, scale = 2)
@@ -44,12 +42,59 @@ public class WorkRecord {
     @Column(name = "hours_worked", nullable = false)
     private Integer hoursWorked;
 
-    @Column(name = "created_at")
-    @Temporal(TemporalType.TIMESTAMP)
+    @Transient
     private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+        if (notificationTime == null) {
+            notificationTime = LocalDateTime.now();
+        }
+    }
+
+    /**
+     * Firebase számára Map formátumba konvertál
+     */
+    public Map<String, Object> toMap() {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", id);
+        map.put("employeeId", employee != null ? employee.getId() : null);
+        map.put("employeeName", employee != null ? employee.getName() : null);
+        map.put("notificationDate", FirebaseDateConverter.dateToString(notificationDate));
+        map.put("notificationTime", FirebaseDateConverter.dateTimeToString(notificationTime));
+        map.put("ebevSerialNumber", ebevSerialNumber);
+        map.put("workDate", FirebaseDateConverter.dateToString(workDate));
+        map.put("payment", payment != null ? payment.toString() : "0");
+        map.put("hoursWorked", hoursWorked);
+        map.put("createdAt", FirebaseDateConverter.dateTimeToString(createdAt));
+        return map;
+    }
+
+    /**
+     * Firebase Map-ből objektummá konvertál (employee nélkül)
+     */
+    public static WorkRecord fromMap(Map<String, Object> map) {
+        WorkRecord record = new WorkRecord();
+        record.setId((String) map.get("id"));
+        record.setNotificationDate(FirebaseDateConverter.stringToDate((String) map.get("notificationDate")));
+        record.setNotificationTime(FirebaseDateConverter.stringToDateTime((String) map.get("notificationTime")));
+        record.setEbevSerialNumber((String) map.get("ebevSerialNumber"));
+        record.setWorkDate(FirebaseDateConverter.stringToDate((String) map.get("workDate")));
+
+        String paymentStr = (String) map.get("payment");
+        if (paymentStr != null && !paymentStr.isEmpty()) {
+            record.setPayment(new BigDecimal(paymentStr));
+        }
+
+        Object hoursObj = map.get("hoursWorked");
+        if (hoursObj instanceof Number) {
+            record.setHoursWorked(((Number) hoursObj).intValue());
+        }
+
+        record.setCreatedAt(FirebaseDateConverter.stringToDateTime((String) map.get("createdAt")));
+        return record;
     }
 }

@@ -161,16 +161,27 @@ public class EmployeeDialog extends Dialog<EmployeeFX> {
         result.setId(employee.getId());
         result.setName(nameField.getText());
         result.setBirthPlace(birthPlaceField.getText());
-        result.setBirthDate(birthDatePicker.getValue());
+
+        LocalDate birthDate = birthDatePicker.getValue();
+        result.setBirthDate(birthDate);
+
         result.setMotherName(motherNameField.getText());
         result.setTaxNumber(taxNumberField.getText());
         result.setSocialSecurityNumber(socialSecurityField.getText());
         result.setAddress(addressField.getText());
+
         if (employee.getId() == null) {
-            result.setCreatedAt(LocalDate.now());
+            LocalDate now = LocalDate.now();
+            result.setCreatedAt(now);
         } else {
             result.setCreatedAt(employee.getCreatedAt());
+            /*
+            if (employee.getCreatedAtStr() != null) {
+                result.setCreatedAtStr(employee.getCreatedAtStr());
+            }
+            */
         }
+
         return result;
     }
 }

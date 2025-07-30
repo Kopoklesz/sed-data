@@ -11,6 +11,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import java.text.SimpleDateFormat;
+
 import java.io.IOException;
 @Configuration
 public class FirebaseConfig {
@@ -22,13 +27,10 @@ public class FirebaseConfig {
     
     @Value("${firebase.project.id}")
     private String projectId;
-
     private final ResourceLoader resourceLoader;
-
     public FirebaseConfig(ResourceLoader resourceLoader) {
         this.resourceLoader = resourceLoader;
     }
-
     @Bean
     public Firestore firestore() throws IOException {
         try {
@@ -52,5 +54,13 @@ public class FirebaseConfig {
         } catch (IOException e) {
             throw new IOException("Failed to initialize Firebase: " + e.getMessage(), e);
         }
+    }
+    @Bean
+    public ObjectMapper objectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        mapper.registerModule(new JavaTimeModule());
+        mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd"));
+        return mapper;
     }
 }

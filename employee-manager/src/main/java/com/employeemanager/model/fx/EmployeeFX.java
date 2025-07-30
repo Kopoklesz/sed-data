@@ -3,10 +3,9 @@ package com.employeemanager.model.fx;
 import com.employeemanager.model.Employee;
 import javafx.beans.property.*;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 
 public class EmployeeFX {
-    private final LongProperty id = new SimpleLongProperty();
+    private final StringProperty id = new SimpleStringProperty();
     private final StringProperty name = new SimpleStringProperty();
     private final StringProperty birthPlace = new SimpleStringProperty();
     private final ObjectProperty<LocalDate> birthDate = new SimpleObjectProperty<>();
@@ -15,26 +14,22 @@ public class EmployeeFX {
     private final StringProperty socialSecurityNumber = new SimpleStringProperty();
     private final StringProperty address = new SimpleStringProperty();
     private final ObjectProperty<LocalDate> createdAt = new SimpleObjectProperty<>();
-    private final StringProperty birthDateStr = new SimpleStringProperty();
 
-    public EmployeeFX() {}
+    public EmployeeFX() {
+        // Új alkalmazott esetén beállítjuk a létrehozás dátumát
+        setCreatedAt(LocalDate.now());
+    }
 
     public EmployeeFX(Employee employee) {
         setId(employee.getId());
         setName(employee.getName());
         setBirthPlace(employee.getBirthPlace());
-        if (employee.getBirthDateStr() != null) {
-            try {
-                setBirthDate(LocalDate.parse(employee.getBirthDateStr()));
-            } catch (Exception e) {
-                //log.error("Error parsing birth date: " + employee.getBirthDateStr(), e);
-            }
-        }
+        setBirthDate(employee.getBirthDate());
         setMotherName(employee.getMotherName());
         setTaxNumber(employee.getTaxNumber());
         setSocialSecurityNumber(employee.getSocialSecurityNumber());
         setAddress(employee.getAddress());
-        setCreatedAt(employee.getCreatedAt());
+        setCreatedAt(employee.getCreatedAt() != null ? employee.getCreatedAt() : LocalDate.now());
     }
 
     public Employee toEmployee() {
@@ -52,15 +47,15 @@ public class EmployeeFX {
     }
 
     // Getter/Setter és Property metódusok
-    public Long getId() {
+    public String getId() {
         return id.get();
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id.set(id);
     }
 
-    public LongProperty idProperty() {
+    public StringProperty idProperty() {
         return id;
     }
 
@@ -93,13 +88,7 @@ public class EmployeeFX {
     }
 
     public void setBirthDate(LocalDate date) {
-        if (date != null) {
-            this.birthDate.set(date);
-            this.birthDateStr.set(date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-        } else {
-            this.birthDate.set(null);
-            this.birthDateStr.set(null);
-        }
+        this.birthDate.set(date);
     }
 
     public ObjectProperty<LocalDate> birthDateProperty() {
@@ -164,29 +153,5 @@ public class EmployeeFX {
 
     public ObjectProperty<LocalDate> createdAtProperty() {
         return createdAt;
-    }
-
-    protected void onCreate() {
-        setCreatedAt(LocalDate.now());
-    }
-
-    public String getBirthDateStr() {
-        return birthDateStr.get();
-    }
-
-    public void setBirthDateStr(String dateStr) {
-        if (dateStr != null && !dateStr.isEmpty()) {
-            try {
-                LocalDate date = LocalDate.parse(dateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-                this.birthDate.set(date);
-                this.birthDateStr.set(dateStr);
-            } catch (Exception e) {
-               //log.error("Error parsing birth date string: " + dateStr, e);
-            }
-        }
-    }
-
-    public StringProperty birthDateStrProperty() {
-        return birthDateStr;
     }
 }

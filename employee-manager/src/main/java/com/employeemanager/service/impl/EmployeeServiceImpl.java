@@ -3,7 +3,6 @@ package com.employeemanager.service.impl;
 import com.employeemanager.model.Employee;
 import com.employeemanager.model.WorkRecord;
 import com.employeemanager.repository.interfaces.EmployeeRepository;
-import com.employeemanager.repository.interfaces.WorkRecordRepository;
 import com.employeemanager.service.exception.ServiceException;
 import com.employeemanager.service.interfaces.EmployeeService;
 import com.employeemanager.service.interfaces.WorkRecordService;
@@ -31,13 +30,18 @@ public class EmployeeServiceImpl implements EmployeeService {
                 throw new ServiceException("Invalid employee data");
             }
 
-            // Ellenőrizzük a unique mezőket
-            if (employee.getId() == null) {
-                if (employeeRepository.findByTaxNumber(employee.getTaxNumber()).isPresent()) {
-                    throw new ServiceException("Tax number already exists");
+            // Ellenőrizzük a unique mezőket új alkalmazott esetén
+            if (employee.getId() == null || employee.getId().isEmpty()) {
+                // Ellenőrizzük az adószámot
+                Optional<Employee> existingByTax = employeeRepository.findByTaxNumber(employee.getTaxNumber());
+                if (existingByTax.isPresent()) {
+                    throw new ServiceException("Az adószám már létezik a rendszerben");
                 }
-                if (employeeRepository.findBySocialSecurityNumber(employee.getSocialSecurityNumber()).isPresent()) {
-                    throw new ServiceException("Social security number already exists");
+
+                // Ellenőrizzük a TAJ számot
+                Optional<Employee> existingBySSN = employeeRepository.findBySocialSecurityNumber(employee.getSocialSecurityNumber());
+                if (existingBySSN.isPresent()) {
+                    throw new ServiceException("A TAJ szám már létezik a rendszerben");
                 }
             }
 
@@ -71,6 +75,15 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public void deleteById(String id) throws ServiceException {
         try {
+            // Ellenőrizzük, hogy vannak-e kapcsolódó munkanaplók
+            List<WorkRecord> employeeRecords = workRecordService.getEmployeeMonthlyRecords(
+                    id, LocalDate.of(1900, 1, 1), LocalDate.of(2100, 12, 31));
+
+            if (!employeeRecords.isEmpty()) {
+                throw new ServiceException("Nem törölhető az alkalmazott, mert " +
+                        employeeRecords.size() + " kapcsolódó munkanapló található");
+            }
+
             employeeRepository.deleteById(id);
         } catch (ExecutionException | InterruptedException e) {
             logger.error("Error deleting employee with id: " + id, e);
@@ -128,7 +141,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         try {
             // Ellenőrizzük, hogy létezik-e az alkalmazott
-            Optional<Employee> employee = findById(workRecord.getEmployee().getId().toString());
+            Optional<Employee> employee = findById(workRecord.getEmployee().getId());
             if (employee.isEmpty()) {
                 throw new ServiceException("Employee not found");
             }
@@ -151,12 +164,12 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
-    public List<WorkRecord> getEmployeeMonthlyRecords(Long employeeId, LocalDate startDate, LocalDate endDate) throws ServiceException {
-        return workRecordService.getEmployeeMonthlyRecords(employeeId.toString(), startDate, endDate);
+    public List<WorkRecord> getEmployeeMonthlyRecords(String employeeId, LocalDate startDate, LocalDate endDate) throws ServiceException {
+        return workRecordService.getEmployeeMonthlyRecords(employeeId, startDate, endDate);
     }
 
     @Override
-    public void deleteWorkRecord(Long id) throws ServiceException {
-        workRecordService.deleteById(id.toString());
+    public void deleteWorkRecord(String id) throws ServiceException {
+        workRecordService.deleteById(id);
     }
 }
