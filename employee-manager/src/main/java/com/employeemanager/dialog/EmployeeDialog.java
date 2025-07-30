@@ -175,9 +175,11 @@ public class EmployeeDialog extends Dialog<EmployeeFX> {
             result.setCreatedAt(now);
         } else {
             result.setCreatedAt(employee.getCreatedAt());
+            /*
             if (employee.getCreatedAtStr() != null) {
                 result.setCreatedAtStr(employee.getCreatedAtStr());
             }
+            */
         }
 
         return result;

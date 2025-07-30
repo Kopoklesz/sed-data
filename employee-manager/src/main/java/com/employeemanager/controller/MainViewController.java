@@ -44,7 +44,7 @@ public class MainViewController implements Initializable {
     // FXML injections for employee table
     @FXML private TextField employeeSearchField;
     @FXML private TableView<EmployeeFX> employeeTable;
-    @FXML private TableColumn<EmployeeFX, Long> idColumn;
+    @FXML private TableColumn<EmployeeFX, String> idColumn;
     @FXML private TableColumn<EmployeeFX, String> nameColumn;
     @FXML private TableColumn<EmployeeFX, String> birthPlaceColumn;
     @FXML private TableColumn<EmployeeFX, LocalDate> birthDateColumn;
@@ -59,7 +59,7 @@ public class MainViewController implements Initializable {
     @FXML private DatePicker endDatePicker;
     @FXML private Label totalHoursLabel;
     @FXML private Label totalPaymentLabel;
-    @FXML private TableColumn<WorkRecordFX, Long> workIdColumn;
+    @FXML private TableColumn<WorkRecordFX, String> workIdColumn;
     @FXML private TableColumn<WorkRecordFX, String> employeeNameColumn;
     @FXML private TableColumn<WorkRecordFX, LocalDate> notificationDateColumn;
     @FXML private TableColumn<WorkRecordFX, String> ebevSerialColumn;
@@ -98,6 +98,19 @@ public class MainViewController implements Initializable {
         taxNumberColumn.setCellValueFactory(new PropertyValueFactory<>("taxNumber"));
         socialSecurityColumn.setCellValueFactory(new PropertyValueFactory<>("socialSecurityNumber"));
         addressColumn.setCellValueFactory(new PropertyValueFactory<>("address"));
+
+        // Dátum formázás a táblázatban
+        birthDateColumn.setCellFactory(column -> new TableCell<EmployeeFX, LocalDate>() {
+            @Override
+            protected void updateItem(LocalDate item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item.format(DateTimeFormatter.ISO_LOCAL_DATE));
+                }
+            }
+        });
 
         employeeTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
@@ -198,7 +211,7 @@ public class MainViewController implements Initializable {
                 "Biztosan törli a kiválasztott alkalmazottat?",
                 "Ez a művelet nem vonható vissza.")) {
             try {
-                employeeService.deleteEmployee(selectedEmployee.getId());
+                employeeService.deleteEmployee(selectedEmployee.getId()); // String ID használata
                 loadInitialData();
                 updateStatus("Alkalmazott törölve: " + selectedEmployee.getName());
             } catch (Exception e) {
@@ -249,7 +262,7 @@ public class MainViewController implements Initializable {
                 "Biztosan törli a kiválasztott munkanaplót?",
                 "Ez a művelet nem vonható vissza.")) {
             try {
-                employeeService.deleteWorkRecord(selectedRecord.getId());
+                employeeService.deleteWorkRecord(selectedRecord.getId()); // String ID használata
                 filterWorkRecords();
                 updateStatus("Munkanapló törölve");
             } catch (Exception e) {
@@ -401,7 +414,7 @@ public class MainViewController implements Initializable {
 
             if (start != null && end != null) {
                 List<WorkRecord> records = employeeService.getEmployeeMonthlyRecords(
-                        employee.getId(), start, end);
+                        employee.getId(), start, end); // String ID használata
 
                 List<WorkRecordFX> workRecordFXList = records.stream()
                         .map(WorkRecordFX::new)

@@ -1,13 +1,11 @@
 package com.employeemanager.model.fx;
 
 import com.employeemanager.model.Employee;
-import com.employeemanager.util.DateUtil;
 import javafx.beans.property.*;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 
 public class EmployeeFX {
-    private final LongProperty id = new SimpleLongProperty();
+    private final StringProperty id = new SimpleStringProperty();
     private final StringProperty name = new SimpleStringProperty();
     private final StringProperty birthPlace = new SimpleStringProperty();
     private final ObjectProperty<LocalDate> birthDate = new SimpleObjectProperty<>();
@@ -16,10 +14,11 @@ public class EmployeeFX {
     private final StringProperty socialSecurityNumber = new SimpleStringProperty();
     private final StringProperty address = new SimpleStringProperty();
     private final ObjectProperty<LocalDate> createdAt = new SimpleObjectProperty<>();
-    private final StringProperty birthDateStr = new SimpleStringProperty();
-    private final StringProperty createdAtStr = new SimpleStringProperty();
 
-    public EmployeeFX() {}
+    public EmployeeFX() {
+        // Új alkalmazott esetén beállítjuk a létrehozás dátumát
+        setCreatedAt(LocalDate.now());
+    }
 
     public EmployeeFX(Employee employee) {
         setId(employee.getId());
@@ -30,7 +29,7 @@ public class EmployeeFX {
         setTaxNumber(employee.getTaxNumber());
         setSocialSecurityNumber(employee.getSocialSecurityNumber());
         setAddress(employee.getAddress());
-        setCreatedAt(employee.getCreatedAt());
+        setCreatedAt(employee.getCreatedAt() != null ? employee.getCreatedAt() : LocalDate.now());
     }
 
     public Employee toEmployee() {
@@ -48,15 +47,15 @@ public class EmployeeFX {
     }
 
     // Getter/Setter és Property metódusok
-    public Long getId() {
+    public String getId() {
         return id.get();
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id.set(id);
     }
 
-    public LongProperty idProperty() {
+    public StringProperty idProperty() {
         return id;
     }
 
@@ -90,7 +89,6 @@ public class EmployeeFX {
 
     public void setBirthDate(LocalDate date) {
         this.birthDate.set(date);
-        this.birthDateStr.set(DateUtil.formatDate(date));
     }
 
     public ObjectProperty<LocalDate> birthDateProperty() {
@@ -155,32 +153,5 @@ public class EmployeeFX {
 
     public ObjectProperty<LocalDate> createdAtProperty() {
         return createdAt;
-    }
-
-    protected void onCreate() {
-        setCreatedAt(LocalDate.now());
-    }
-
-    public String getBirthDateStr() {
-        return birthDateStr.get();
-    }
-
-    public void setBirthDateStr(String dateStr) {
-        this.birthDateStr.set(dateStr);
-        DateUtil.parseDate(dateStr).ifPresent(date -> this.birthDate.set(date));
-    }
-
-    public StringProperty birthDateStrProperty() {
-        return birthDateStr;
-    }
-
-    public void setCreatedAtStr(String dateStr) {
-        DateUtil.parseDate(dateStr).ifPresent(date -> {
-            this.createdAt.set(date);
-        });
-    }
-
-    public String getCreatedAtStr() {
-        return createdAtStr.get();
     }
 }
