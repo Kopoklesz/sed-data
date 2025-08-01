@@ -17,6 +17,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +41,9 @@ public class MainViewController implements Initializable {
     private final ReportService reportService;
     private final SettingsService settingsService;
     private final ExcelExporter excelExporter;
+
+    // FXML injections for main TabPane
+    @FXML private TabPane mainTabPane;
 
     // FXML injections for employee table
     @FXML private TextField employeeSearchField;
@@ -89,7 +93,176 @@ public class MainViewController implements Initializable {
         updateStatus("Alkalmazás betöltve");
     }
 
+    // ==========================================
+    // ÚJ MENÜ AKCIÓK - FÁJL MENÜ
+    // ==========================================
+
+    @FXML
+    private void showAddEmployeeDialog() {
+        if (isSafeToExecuteShortcut()) {
+            Dialog<EmployeeFX> dialog = new EmployeeDialog();
+            dialog.showAndWait().ifPresent(this::saveEmployee);
+        }
+    }
+
+    @FXML
+    private void showAddWorkRecordDialog() {
+        if (isSafeToExecuteShortcut()) {
+            Dialog<WorkRecordFX> dialog = new WorkRecordDialog(employeeService);
+            dialog.showAndWait().ifPresent(this::saveWorkRecord);
+        }
+    }
+
+    // ==========================================
+    // ÚJ MENÜ AKCIÓK - SZERKESZTÉS MENÜ
+    // ==========================================
+
+    @FXML
+    private void editSelectedEmployee() {
+        if (!isSafeToExecuteShortcut()) {
+            return;
+        }
+
+        EmployeeFX selectedEmployee = employeeTable.getSelectionModel().getSelectedItem();
+
+        if (selectedEmployee == null) {
+            // Nincs kijelölve alkalmazott -> átváltás alkalmazottak tab-ra
+            showEmployeeTab();
+            updateStatus("Válasszon ki egy alkalmazottat a szerkesztéshez");
+            AlertHelper.showInformation("Alkalmazott szerkesztése",
+                    "Nincs kiválasztott alkalmazott",
+                    "Kérem válasszon ki egy alkalmazottat a táblázatból a szerkesztéshez.");
+            return;
+        }
+
+        // Van kijelölve alkalmazott -> szerkesztő dialógus
+        Dialog<EmployeeFX> dialog = new EmployeeDialog(selectedEmployee);
+        dialog.showAndWait().ifPresent(this::saveEmployee);
+    }
+
+    @FXML
+    private void editSelectedWorkRecord() {
+        if (!isSafeToExecuteShortcut()) {
+            return;
+        }
+
+        WorkRecordFX selectedRecord = workRecordTable.getSelectionModel().getSelectedItem();
+
+        if (selectedRecord == null) {
+            // Nincs kijelölve munkanapló -> átváltás munkanaplók tab-ra
+            showWorkRecordTab();
+            updateStatus("Válasszon ki egy munkanaplót a szerkesztéshez");
+            AlertHelper.showInformation("Munkanapló szerkesztése",
+                    "Nincs kiválasztott munkanapló",
+                    "Kérem válasszon ki egy munkanaplót a táblázatból a szerkesztéshez.");
+            return;
+        }
+
+        // Van kijelölve munkanapló -> szerkesztő dialógus
+        Dialog<WorkRecordFX> dialog = new WorkRecordDialog(employeeService, selectedRecord);
+        dialog.showAndWait().ifPresent(this::saveWorkRecord);
+    }
+
+    // ==========================================
+    // ÚJ MENÜ AKCIÓK - NÉZET MENÜ
+    // ==========================================
+
+    @FXML
+    private void showEmployeeTab() {
+        mainTabPane.getSelectionModel().select(0); // Első tab: Alkalmazottak
+        updateStatus("Alkalmazottak tab megjelenítve");
+    }
+
+    @FXML
+    private void showWorkRecordTab() {
+        mainTabPane.getSelectionModel().select(1); // Második tab: Munkanaplók
+        updateStatus("Munkanaplók tab megjelenítve");
+    }
+
+    @FXML
+    private void showReportsTab() {
+        mainTabPane.getSelectionModel().select(2); // Harmadik tab: Riportok
+        updateStatus("Riportok tab megjelenítve");
+    }
+
+    // ==========================================
+    // ÚJ MENÜ AKCIÓK - ESZKÖZÖK MENÜ
+    // ==========================================
+
+    @FXML
+    private void showDatabaseSettings() {
+        // Placeholder implementation - később kerül implementálásra
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Fejlesztés alatt");
+        alert.setHeaderText("Adatbázis kapcsolat beállító");
+        alert.setContentText("Ez a funkció hamarosan elérhető lesz.\n\n" +
+                "Itt lehetőség lesz majd különböző adatbázisokhoz való csatlakozásra " +
+                "és a kapcsolat paramétereinek beállítására.");
+        alert.showAndWait();
+        updateStatus("Adatbázis beállítások - fejlesztés alatt");
+    }
+
+    @FXML
+    private void showUserGuide() {
+        try {
+            Dialog<Void> dialog = new UserGuideDialog();
+            dialog.showAndWait();
+            updateStatus("Használati útmutató megjelenítve");
+        } catch (Exception e) {
+            AlertHelper.showError("Hiba", "Nem sikerült megnyitni a használati útmutatót", e.getMessage());
+            updateStatus("Hiba a használati útmutató megnyitása közben");
+        }
+    }
+
+    @FXML
+    private void showAboutDialog() {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Névjegy");
+        alert.setHeaderText("Alkalmazott Nyilvántartó Rendszer");
+        alert.setContentText("Verzió: " + settingsService.getApplicationVersion() + "\n" +
+                "Készítette: " + settingsService.getApplicationAuthor() + "\n\n" +
+                "Modern JavaFX alkalmazás alkalmazottak és munkanaplók kezelésére.\n" +
+                "Firebase adatbázis támogatással és Excel export funkcióval.\n\n" +
+                "© 2024 Minden jog fenntartva");
+        alert.showAndWait();
+        updateStatus("Névjegy megjelenítve");
+    }
+
+    // ==========================================
+    // SEGÉD METÓDUSOK A BIZTONSÁGOS MŰKÖDÉSHEZ
+    // ==========================================
+
+    /**
+     * Ellenőrzi, hogy biztonságos-e végrehajtani a gyorsbillentyű akciót.
+     * Gépelés közben (TextField/TextArea fókuszban van) ne aktiválódjanak a shortcuts.
+     */
+    private boolean isSafeToExecuteShortcut() {
+        Node focusedNode = mainTabPane.getScene().getFocusOwner();
+
+        if (focusedNode instanceof TextInputControl) {
+            // Ha TextField, TextArea vagy más szövegbeviteli mező van fókuszban,
+            // ne hajtsuk végre a shortcut-ot
+            return false;
+        }
+
+        return true;
+    }
+
+    // ==========================================
+    // EREDETI METÓDUSOK - FRISSÍTVE
+    // ==========================================
+
     private void setupEmployeeTable() {
+        // Column resize policy beállítása Java kódban
+        employeeTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        // Sor magasság beállítása a jobb vertikális középre igazításhoz
+        employeeTable.setRowFactory(tv -> {
+            TableRow<EmployeeFX> row = new TableRow<>();
+            row.setPrefHeight(40);
+            return row;
+        });
+
         idColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         birthPlaceColumn.setCellValueFactory(new PropertyValueFactory<>("birthPlace"));
@@ -119,11 +292,8 @@ public class MainViewController implements Initializable {
                 if (selectedEmployee != null) {
                     // Betöltjük a munkanaplókat
                     loadEmployeeWorkRecords(selectedEmployee);
-                    // Átváltunk a Havi nyilvántartás tab-ra
-                    TabPane tabPane = (TabPane) employeeTable.getScene().lookup(".tab-pane");
-                    if (tabPane != null) {
-                        tabPane.getSelectionModel().select(1); // 1 = Havi nyilvántartás tab
-                    }
+                    // Átváltunk a Munkanaplók tab-ra
+                    showWorkRecordTab();
                     updateStatus("Megjelenítve: " + selectedEmployee.getName() + " munkanaplói");
                 }
             }
@@ -131,6 +301,16 @@ public class MainViewController implements Initializable {
     }
 
     private void setupWorkRecordTable() {
+        // Column resize policy beállítása Java kódban
+        workRecordTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        // Sor magasság beállítása a jobb vertikális középre igazításhoz
+        workRecordTable.setRowFactory(tv -> {
+            TableRow<WorkRecordFX> row = new TableRow<>();
+            row.setPrefHeight(40);
+            return row;
+        });
+
         workIdColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
         employeeNameColumn.setCellValueFactory(new PropertyValueFactory<>("employeeName"));
         notificationDateColumn.setCellValueFactory(new PropertyValueFactory<>("notificationDate"));
@@ -174,29 +354,12 @@ public class MainViewController implements Initializable {
             employeeTable.setItems(filteredEmployees);
 
             filterWorkRecords();
+            loadReportList();
             updateStatus("Adatok betöltve");
         } catch (Exception e) {
             AlertHelper.showError("Hiba", "Nem sikerült betölteni az adatokat", e.getMessage());
             updateStatus("Hiba az adatok betöltése közben");
         }
-    }
-
-    @FXML
-    private void showAddEmployeeDialog() {
-        Dialog<EmployeeFX> dialog = new EmployeeDialog();
-        dialog.showAndWait().ifPresent(this::saveEmployee);
-    }
-
-    @FXML
-    private void showEditEmployeeDialog() {
-        EmployeeFX selectedEmployee = employeeTable.getSelectionModel().getSelectedItem();
-        if (selectedEmployee == null) {
-            AlertHelper.showWarning("Figyelmeztetés", "Nincs kiválasztott alkalmazott");
-            return;
-        }
-
-        Dialog<EmployeeFX> dialog = new EmployeeDialog(selectedEmployee);
-        dialog.showAndWait().ifPresent(this::saveEmployee);
     }
 
     private void saveEmployee(EmployeeFX employeeFX) {
@@ -208,6 +371,26 @@ public class MainViewController implements Initializable {
             AlertHelper.showError("Hiba", "Nem sikerült menteni az alkalmazottat", e.getMessage());
             updateStatus("Hiba az alkalmazott mentése közben");
         }
+    }
+
+    private void saveWorkRecord(WorkRecordFX workRecordFX) {
+        try {
+            WorkRecord savedRecord = employeeService.addWorkRecord(workRecordFX.toWorkRecord());
+            filterWorkRecords();
+            updateStatus("Munkanapló mentve");
+        } catch (Exception e) {
+            AlertHelper.showError("Hiba", "Nem sikerült menteni a munkanaplót", e.getMessage());
+            updateStatus("Hiba a munkanapló mentése közben");
+        }
+    }
+
+    // ==========================================
+    // EREDETI CONTEXT MENU ÉS EGYÉB AKCIÓK
+    // ==========================================
+
+    @FXML
+    private void showEditEmployeeDialog() {
+        editSelectedEmployee(); // Újrafelhasználjuk az intelligens szerkesztést
     }
 
     @FXML
@@ -222,7 +405,7 @@ public class MainViewController implements Initializable {
                 "Biztosan törli a kiválasztott alkalmazottat?",
                 "Ez a művelet nem vonható vissza.")) {
             try {
-                employeeService.deleteEmployee(selectedEmployee.getId()); // String ID használata
+                employeeService.deleteEmployee(selectedEmployee.getId());
                 loadInitialData();
                 updateStatus("Alkalmazott törölve: " + selectedEmployee.getName());
             } catch (Exception e) {
@@ -233,32 +416,8 @@ public class MainViewController implements Initializable {
     }
 
     @FXML
-    private void showAddWorkRecordDialog() {
-        Dialog<WorkRecordFX> dialog = new WorkRecordDialog(employeeService);
-        dialog.showAndWait().ifPresent(this::saveWorkRecord);
-    }
-
-    @FXML
     private void showEditWorkRecordDialog() {
-        WorkRecordFX selectedRecord = workRecordTable.getSelectionModel().getSelectedItem();
-        if (selectedRecord == null) {
-            AlertHelper.showWarning("Figyelmeztetés", "Nincs kiválasztott munkanapló");
-            return;
-        }
-
-        Dialog<WorkRecordFX> dialog = new WorkRecordDialog(employeeService, selectedRecord);
-        dialog.showAndWait().ifPresent(this::saveWorkRecord);
-    }
-
-    private void saveWorkRecord(WorkRecordFX workRecordFX) {
-        try {
-            WorkRecord savedRecord = employeeService.addWorkRecord(workRecordFX.toWorkRecord());
-            filterWorkRecords();
-            updateStatus("Munkanapló mentve");
-        } catch (Exception e) {
-            AlertHelper.showError("Hiba", "Nem sikerült menteni a munkanaplót", e.getMessage());
-            updateStatus("Hiba a munkanapló mentése közben");
-        }
+        editSelectedWorkRecord(); // Újrafelhasználjuk az intelligens szerkesztést
     }
 
     @FXML
@@ -273,7 +432,7 @@ public class MainViewController implements Initializable {
                 "Biztosan törli a kiválasztott munkanaplót?",
                 "Ez a művelet nem vonható vissza.")) {
             try {
-                employeeService.deleteWorkRecord(selectedRecord.getId()); // String ID használata
+                employeeService.deleteWorkRecord(selectedRecord.getId());
                 filterWorkRecords();
                 updateStatus("Munkanapló törölve");
             } catch (Exception e) {
@@ -339,6 +498,9 @@ public class MainViewController implements Initializable {
 
             loadReportList();
             updateStatus("Riport generálva: " + reportPath);
+            AlertHelper.showInformation("Riport generálva",
+                    "A riport sikeresen elkészült",
+                    "Fájl helye: " + reportPath);
         } catch (Exception e) {
             AlertHelper.showError("Hiba", "Nem sikerült generálni a riportot", e.getMessage());
             updateStatus("Hiba a riport generálása közben");
@@ -372,50 +534,11 @@ public class MainViewController implements Initializable {
         }
     }
 
-    @FXML
-    private void showSettings() {
-        try {
-            Dialog<Void> dialog = new SettingsDialog(settingsService);
-            dialog.showAndWait();
-            updateStatus("Beállítások mentve");
-        } catch (Exception e) {
-            AlertHelper.showError("Hiba", "Nem sikerült megnyitni a beállításokat", e.getMessage());
-            updateStatus("Hiba a beállítások megnyitása közben");
-        }
-    }
-
-    @FXML
-    private void showAboutDialog() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Névjegy");
-        alert.setHeaderText("Alkalmazott Nyilvántartó Rendszer");
-        alert.setContentText("Verzió: " + settingsService.getApplicationVersion() + "\n" +
-                "Készítette: " + settingsService.getApplicationAuthor() + "\n\n" +
-                "© 2024 Minden jog fenntartva");
-        alert.showAndWait();
-    }
-
-    @FXML
-    private void showUserGuide() {
-        try {
-            Dialog<Void> dialog = new UserGuideDialog();
-            dialog.showAndWait();
-        } catch (Exception e) {
-            AlertHelper.showError("Hiba", "Nem sikerült megnyitni a használati útmutatót", e.getMessage());
-        }
-    }
-
-    @FXML
-    private void exitApplication() {
-        if (AlertHelper.showConfirmation("Kilépés",
-                "Biztosan ki szeretne lépni?",
-                "Minden nem mentett változás elvész.")) {
-            System.exit(0);
-        }
-    }
-
     private void updateStatus(String message) {
-        statusBar.setText(message + " - " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        if (statusBar != null) {
+            statusBar.setText(message + " - " +
+                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        }
     }
 
     private void loadEmployeeWorkRecords(EmployeeFX employee) {
@@ -425,7 +548,7 @@ public class MainViewController implements Initializable {
 
             if (start != null && end != null) {
                 List<WorkRecord> records = employeeService.getEmployeeMonthlyRecords(
-                        employee.getId(), start, end); // String ID használata
+                        employee.getId(), start, end);
 
                 List<WorkRecordFX> workRecordFXList = records.stream()
                         .map(WorkRecordFX::new)
@@ -441,20 +564,12 @@ public class MainViewController implements Initializable {
         }
     }
 
-    @FXML
-    private void showEmployeeList() {
-        // Alapértelmezetten már az alkalmazottak tab van megnyitva
-    }
-
-    @FXML
-    private void showEmployeeSearch() {
-        // A keresés már implementálva van a TextField-en keresztül
-        employeeSearchField.requestFocus();
-    }
+    // ==========================================
+    // EGYÉB AKCIÓK
+    // ==========================================
 
     @FXML
     private void searchEmployees() {
-        // A keresés már automatikusan működik a TextField listener-en keresztül
         String searchText = employeeSearchField.getText();
         if (filteredEmployees != null) {
             filteredEmployees.setPredicate(employee -> {
@@ -464,50 +579,16 @@ public class MainViewController implements Initializable {
                 return employee.getName().toLowerCase().contains(searchText.toLowerCase());
             });
         }
+        updateStatus("Keresés: " + (searchText.isEmpty() ? "minden alkalmazott" : searchText));
     }
 
     @FXML
-    private void showMonthlyOverview() {
-        // Átvált a havi nyilvántartás tabra
-        TabPane tabPane = (TabPane) workRecordTable.getScene().lookup(".tab-pane");
-        tabPane.getSelectionModel().select(1); // 1 = második tab
-    }
-
-    @FXML
-    private void showWorkRecordSearch() {
-        // Átvált a havi nyilvántartás tabra és fókuszba helyezi a dátumválasztót
-        TabPane tabPane = (TabPane) workRecordTable.getScene().lookup(".tab-pane");
-        tabPane.getSelectionModel().select(1);
-        startDatePicker.requestFocus();
-    }
-
-    @FXML
-    private void generateMonthlyReport() {
-        // Átvált a riportok tabra és beállítja az aktuális hónapot
-        TabPane tabPane = (TabPane) reportList.getScene().lookup(".tab-pane");
-        tabPane.getSelectionModel().select(2); // 2 = harmadik tab
-        LocalDate now = LocalDate.now();
-        reportStartDate.setValue(now.withDayOfMonth(1));
-        reportEndDate.setValue(now.withDayOfMonth(now.lengthOfMonth()));
-        includeWorkRecords.setSelected(true);
-        includeSummary.setSelected(true);
-        generateReport();
-    }
-
-    @FXML
-    private void generateEmployeeReport() {
-        // Átvált a riportok tabra és beállítja az alkalmazotti részleteket
-        TabPane tabPane = (TabPane) reportList.getScene().lookup(".tab-pane");
-        tabPane.getSelectionModel().select(2);
-        includeEmployeeDetails.setSelected(true);
-        generateReport();
-    }
-
-    @FXML
-    private void showCustomReportDialog() {
-        // Átvált a riportok tabra
-        TabPane tabPane = (TabPane) reportList.getScene().lookup(".tab-pane");
-        tabPane.getSelectionModel().select(2);
+    private void showEmployeeWorkRecords() {
+        EmployeeFX selectedEmployee = employeeTable.getSelectionModel().getSelectedItem();
+        if (selectedEmployee != null) {
+            loadEmployeeWorkRecords(selectedEmployee);
+            showWorkRecordTab();
+        }
     }
 
     @FXML
@@ -521,6 +602,9 @@ public class MainViewController implements Initializable {
         try {
             // TODO: Implement report opening logic
             updateStatus("Riport megnyitása: " + selectedReport);
+            AlertHelper.showInformation("Riport megnyitása",
+                    "Fejlesztés alatt",
+                    "A riport megnyitása funkció hamarosan elérhető lesz.");
         } catch (Exception e) {
             AlertHelper.showError("Hiba", "Nem sikerült megnyitni a riportot", e.getMessage());
         }
@@ -537,6 +621,9 @@ public class MainViewController implements Initializable {
         try {
             // TODO: Implement report export logic
             updateStatus("Riport exportálása: " + selectedReport);
+            AlertHelper.showInformation("Riport exportálása",
+                    "Fejlesztés alatt",
+                    "A riport exportálása funkció hamarosan elérhető lesz.");
         } catch (Exception e) {
             AlertHelper.showError("Hiba", "Nem sikerült exportálni a riportot", e.getMessage());
         }
@@ -557,17 +644,12 @@ public class MainViewController implements Initializable {
                 // TODO: Implement report deletion logic
                 loadReportList();
                 updateStatus("Riport törölve: " + selectedReport);
+                AlertHelper.showInformation("Riport törölve",
+                        "Fejlesztés alatt",
+                        "A riport törlése funkció hamarosan elérhető lesz.");
             } catch (Exception e) {
                 AlertHelper.showError("Hiba", "Nem sikerült törölni a riportot", e.getMessage());
             }
-        }
-    }
-
-    @FXML
-    private void showEmployeeWorkRecords() {
-        EmployeeFX selectedEmployee = employeeTable.getSelectionModel().getSelectedItem();
-        if (selectedEmployee != null) {
-            loadEmployeeWorkRecords(selectedEmployee);
         }
     }
 }

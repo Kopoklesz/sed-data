@@ -1,0 +1,702 @@
+/* ==========================================
+   Modern JavaFX Application CSS - JAVÍTOTT
+   Világos téma alapértelmezetten
+   ========================================== */
+
+/* CSS Változók - Könnyű témaváltás */
+.root {
+    /* Világos téma színek */
+    -fx-primary-color: #2196F3;
+    -fx-primary-dark: #1976D2;
+    -fx-primary-light: #BBDEFB;
+
+    -fx-accent-color: #4CAF50;
+    -fx-accent-dark: #388E3C;
+    -fx-accent-light: #C8E6C9;
+
+    -fx-background-primary: #FFFFFF;
+    -fx-background-secondary: #F5F5F5;
+    -fx-background-tertiary: #EEEEEE;
+
+    -fx-text-primary: #212121;
+    -fx-text-secondary: #757575;
+    -fx-text-hint: #BDBDBD;
+
+    -fx-border-color: #E0E0E0;
+    -fx-border-color-focus: #2196F3;
+
+    -fx-shadow-color: rgba(0, 0, 0, 0.1);
+    -fx-shadow-color-strong: rgba(0, 0, 0, 0.2);
+
+    /* Typography */
+    -fx-app-font-family: "Segoe UI", "System", sans-serif;
+    -fx-font-size-small: 12px;
+    -fx-font-size-normal: 14px;
+    -fx-font-size-large: 16px;
+    -fx-font-size-xlarge: 18px;
+}
+
+/* Sötét téma - később aktiválható */
+.root.dark-theme {
+    -fx-primary-color: #64B5F6;
+    -fx-primary-dark: #42A5F5;
+    -fx-primary-light: #90CAF9;
+
+    -fx-accent-color: #81C784;
+    -fx-accent-dark: #66BB6A;
+    -fx-accent-light: #A5D6A7;
+
+    -fx-background-primary: #303030;
+    -fx-background-secondary: #424242;
+    -fx-background-tertiary: #505050;
+
+    -fx-text-primary: #FFFFFF;
+    -fx-text-secondary: #BDBDBD;
+    -fx-text-hint: #757575;
+
+    -fx-border-color: #616161;
+    -fx-border-color-focus: #64B5F6;
+
+    -fx-shadow-color: rgba(0, 0, 0, 0.3);
+    -fx-shadow-color-strong: rgba(0, 0, 0, 0.5);
+}
+
+/* ==========================================
+   FŐBB LAYOUT KOMPONENSEK
+   ========================================== */
+
+.main-container {
+    -fx-background-color: #FFFFFF;
+    -fx-font-family: "Segoe UI", "System", sans-serif;
+    -fx-font-size: 14px;
+}
+
+/* MenuBar stílusok */
+.main-menubar {
+    -fx-background-color: #F5F5F5;
+    -fx-border-color: transparent transparent #E0E0E0 transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 12 25 12 25;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 4, 0.0, 0, 1);
+}
+
+.main-menubar .menu {
+    -fx-font-size: 14px;
+    -fx-text-fill: #212121;
+    -fx-padding: 10 18 10 18;
+    -fx-background-radius: 4;
+}
+
+.main-menubar .menu:hover {
+    -fx-background-color: #BBDEFB;
+    -fx-text-fill: #1976D2;
+}
+
+.main-menubar .menu-item {
+    -fx-font-size: 14px;
+    -fx-text-fill: #212121;
+    -fx-padding: 10 20 10 20;
+    -fx-background-color: transparent;
+}
+
+.main-menubar .menu-item:hover {
+    -fx-background-color: #BBDEFB;
+    -fx-text-fill: #1976D2;
+}
+
+.separator-menu-item .line {
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 4 0 4 0;
+}
+
+/* TabPane stílusok */
+.main-tabpane {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: transparent;
+}
+
+.main-tabpane .tab-header-area {
+    -fx-background-color: #F5F5F5;
+    -fx-border-color: transparent transparent #E0E0E0 transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 0 15 0 15;
+}
+
+.main-tabpane .tab-header-background {
+    -fx-background-color: transparent;
+}
+
+.main-tab {
+    -fx-background-color: transparent;
+    -fx-text-fill: #757575;
+    -fx-font-size: 16px;
+    -fx-font-weight: normal;
+    -fx-padding: 12 20 12 20;
+    -fx-background-radius: 6 6 0 0;
+    -fx-border-radius: 6 6 0 0;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.main-tab:selected {
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #2196F3;
+    -fx-font-weight: bold;
+    -fx-border-color: #2196F3 #2196F3 transparent #2196F3;
+    -fx-border-width: 2 2 0 2;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.main-tab:hover {
+    -fx-background-color: #EEEEEE;
+    -fx-text-fill: #212121;
+}
+
+.main-tab:focused {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.tab-content {
+    -fx-background-color: #FFFFFF;
+}
+
+/* ==========================================
+   GOMBOK
+   ========================================== */
+
+.button {
+    -fx-font-family: "Segoe UI", "System", sans-serif;
+    -fx-font-size: 14px;
+    -fx-padding: 8 16 8 16;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 2, 0.0, 0, 1);
+}
+
+.primary-button {
+    -fx-background-color: #2196F3;
+    -fx-text-fill: white;
+    -fx-border-color: transparent;
+    -fx-font-weight: bold;
+}
+
+.primary-button:hover {
+    -fx-background-color: #1976D2;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 4, 0.0, 0, 2);
+}
+
+.primary-button:pressed {
+    -fx-background-color: #1976D2;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 1, 0.0, 0, 0);
+}
+
+.accent-button {
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: white;
+    -fx-border-color: transparent;
+    -fx-font-weight: bold;
+}
+
+.accent-button:hover {
+    -fx-background-color: #388E3C;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 4, 0.0, 0, 2);
+}
+
+.secondary-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #2196F3;
+    -fx-border-color: #2196F3;
+    -fx-border-width: 1;
+    -fx-font-weight: bold;
+}
+
+.secondary-button:hover {
+    -fx-background-color: #BBDEFB;
+    -fx-text-fill: #1976D2;
+    -fx-border-color: #1976D2;
+}
+
+.danger-button {
+    -fx-background-color: #F44336;
+    -fx-text-fill: white;
+    -fx-border-color: transparent;
+    -fx-font-weight: bold;
+}
+
+.danger-button:hover {
+    -fx-background-color: #D32F2F;
+    -fx-effect: dropshadow(gaussian, rgba(244, 67, 54, 0.3), 4, 0.0, 0, 2);
+}
+
+/* ==========================================
+   TÁBLÁZATOK - JAVÍTOTT OSZLOPSZÉLESSÉG
+   ========================================== */
+
+.main-table {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-table-cell-border-color: #E0E0E0;
+    -fx-column-resize-policy: constrained-resize;
+}
+
+.main-table .column-header-background {
+    -fx-background-color: #F5F5F5;
+    -fx-background-radius: 8 8 0 0;
+}
+
+.main-table .column-header {
+    -fx-background-color: transparent;
+    -fx-text-fill: #0D47A1;
+    -fx-font-weight: bold;
+    -fx-font-size: 15px;
+    -fx-padding: 15 8 15 8;
+    -fx-border-color: transparent transparent #E0E0E0 transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-alignment: CENTER;
+}
+
+.main-table .table-row-cell {
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #212121;
+    -fx-border-color: transparent transparent #E0E0E0 transparent;
+    -fx-border-width: 0 0 0.5 0;
+    -fx-cell-size: 40px;
+}
+
+.main-table .table-row-cell {
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #212121;
+    -fx-border-color: transparent transparent #E0E0E0 transparent;
+    -fx-border-width: 0 0 0.5 0;
+}
+
+.main-table .table-row-cell:odd {
+    -fx-background-color: #EEEEEE;
+}
+
+.main-table .table-row-cell:selected {
+    -fx-background-color: #BBDEFB;
+    -fx-text-fill: #0D47A1;
+    -fx-font-weight: bold;
+}
+
+.main-table .table-row-cell:hover {
+    -fx-background-color: #E3F2FD;
+    -fx-text-fill: #1565C0;
+}
+
+.main-table .table-cell {
+    -fx-padding: 12 8 12 8;
+    -fx-font-size: 15px;
+    -fx-alignment: CENTER;
+    -fx-text-fill: #1A1A1A;
+    -fx-font-weight: 500;
+}
+
+.table-column-id .table-cell {
+    -fx-font-family: "Consolas", "Monaco", monospace;
+    -fx-font-size: 13px;
+    -fx-text-fill: #424242;
+    -fx-pref-width: 80px;
+    -fx-max-width: 80px;
+    -fx-min-width: 80px;
+    -fx-alignment: CENTER;
+    -fx-font-weight: bold;
+}
+
+.table-column-name .table-cell {
+    -fx-font-weight: bold;
+    -fx-pref-width: 150px;
+    -fx-min-width: 120px;
+    -fx-alignment: CENTER;
+    -fx-font-size: 15px;
+    -fx-text-fill: #0D47A1;
+}
+
+.table-column-text .table-cell {
+    -fx-pref-width: 120px;
+    -fx-min-width: 100px;
+    -fx-alignment: CENTER;
+    -fx-font-size: 15px;
+    -fx-text-fill: #1A1A1A;
+}
+
+.table-column-currency .table-cell {
+    -fx-alignment: CENTER;
+    -fx-font-family: "Consolas", "Monaco", monospace;
+    -fx-font-weight: bold;
+    -fx-pref-width: 100px;
+    -fx-min-width: 80px;
+    -fx-font-size: 15px;
+    -fx-text-fill: #2E7D32;
+}
+
+.table-column-number .table-cell {
+    -fx-alignment: CENTER;
+    -fx-font-family: "Consolas", "Monaco", monospace;
+    -fx-pref-width: 90px;
+    -fx-min-width: 70px;
+    -fx-font-size: 15px;
+    -fx-text-fill: #1A1A1A;
+    -fx-font-weight: 500;
+}
+
+.table-column-date .table-cell {
+    -fx-font-family: "Consolas", "Monaco", monospace;
+    -fx-font-size: 13px;
+    -fx-pref-width: 110px;
+    -fx-min-width: 100px;
+    -fx-alignment: CENTER;
+    -fx-text-fill: #5D4037;
+    -fx-font-weight: 500;
+}
+
+/* ==========================================
+   BEVITELI MEZŐK
+   ========================================== */
+
+.text-field, .date-picker {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 8 12 8 12;
+    -fx-font-size: 14px;
+    -fx-text-fill: #212121;
+}
+
+.text-field:focused, .date-picker:focused {
+    -fx-border-color: #2196F3;
+    -fx-border-width: 2;
+    -fx-effect: dropshadow(gaussian, #BBDEFB, 4, 0.0, 0, 0);
+}
+
+.date-picker .arrow-button {
+    -fx-background-color: #2196F3;
+    -fx-background-radius: 0 6 6 0;
+    -fx-border-color: #2196F3;
+    -fx-border-radius: 0 6 6 0;
+    -fx-padding: 8 12 8 12;
+}
+
+.date-picker .arrow-button .arrow {
+    -fx-background-color: white;
+    -fx-shape: "M7 10l5 5 5-5z";
+    -fx-scale-shape: true;
+    -fx-scale-x: 1.2;
+    -fx-scale-y: 1.2;
+}
+
+.date-picker .arrow-button:hover {
+    -fx-background-color: #1976D2;
+    -fx-border-color: #1976D2;
+    -fx-effect: dropshadow(gaussian, rgba(33, 150, 243, 0.3), 4, 0.0, 0, 2);
+}
+
+.search-field {
+    -fx-prompt-text-fill: #BDBDBD;
+    -fx-font-size: 14px;
+}
+
+/* ==========================================
+   CÍMKÉK ÉS SZÖVEGEK
+   ========================================== */
+
+.label {
+    -fx-text-fill: #212121;
+    -fx-font-size: 14px;
+    -fx-font-family: "Segoe UI", "System", sans-serif;
+}
+
+.toolbar-label {
+    -fx-font-weight: bold;
+    -fx-text-fill: #212121;
+}
+
+.toolbar-separator {
+    -fx-font-weight: bold;
+    -fx-text-fill: #757575;
+    -fx-font-size: 16px;
+}
+
+.summary-label {
+    -fx-font-weight: bold;
+    -fx-text-fill: #212121;
+    -fx-font-size: 16px;
+}
+
+.summary-text {
+    -fx-text-fill: #757575;
+}
+
+.summary-value {
+    -fx-font-weight: bold;
+    -fx-text-fill: #2196F3;
+    -fx-font-family: "Consolas", "Monaco", monospace;
+}
+
+.settings-label {
+    -fx-font-weight: bold;
+    -fx-text-fill: #212121;
+}
+
+/* ==========================================
+   TOOLBAR-OK ÉS KONTÉNEREK
+   ========================================== */
+
+.search-toolbar, .filter-toolbar, .action-toolbar, .summary-toolbar {
+    -fx-background-color: #F5F5F5;
+    -fx-padding: 12 15 12 15;
+    -fx-background-radius: 8;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+}
+
+.settings-pane {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.settings-pane .title {
+    -fx-text-fill: #212121;
+    -fx-font-weight: bold;
+    -fx-font-size: 16px;
+}
+
+.settings-pane .content {
+    -fx-background-color: #FFFFFF;
+    -fx-background-radius: 0 0 8 8;
+}
+
+/* ==========================================
+   CHECKBOX ÉS EGYÉB KOMPONENSEK
+   ========================================== */
+
+.settings-checkbox {
+    -fx-text-fill: #212121;
+    -fx-font-size: 14px;
+}
+
+.settings-checkbox .box {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 2;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+}
+
+.settings-checkbox:selected .box {
+    -fx-background-color: #2196F3;
+    -fx-border-color: #2196F3;
+}
+
+.settings-checkbox:selected .mark {
+    -fx-background-color: white;
+}
+
+.report-list {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.report-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #212121;
+    -fx-padding: 8 12 8 12;
+    -fx-border-color: transparent transparent #E0E0E0 transparent;
+    -fx-border-width: 0 0 0.5 0;
+}
+
+.report-list .list-cell:selected {
+    -fx-background-color: #BBDEFB;
+    -fx-text-fill: #1976D2;
+}
+
+.report-list .list-cell:hover {
+    -fx-background-color: #EEEEEE;
+}
+
+/* ==========================================
+   CONTEXT MENU
+   ========================================== */
+
+.context-menu {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 8, 0.0, 0, 4);
+}
+
+.context-menu .menu-item {
+    -fx-background-color: transparent;
+    -fx-text-fill: #212121;
+    -fx-padding: 8 15 8 15;
+}
+
+.context-menu .menu-item:hover {
+    -fx-background-color: #BBDEFB;
+    -fx-text-fill: #1976D2;
+}
+
+/* ==========================================
+   STATUS BAR
+   ========================================== */
+
+.status-bar {
+    -fx-background-color: #F5F5F5;
+    -fx-border-color: #E0E0E0 transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 8 15 8 15;
+    -fx-text-fill: #757575;
+    -fx-font-size: 12px;
+}
+
+/* ==========================================
+   SCROLLBAR STÍLUSOK
+   ========================================== */
+
+.scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .track {
+    -fx-background-color: #EEEEEE;
+    -fx-background-radius: 4;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: #BDBDBD;
+    -fx-background-radius: 4;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: #757575;
+}
+
+.scroll-bar .thumb:pressed {
+    -fx-background-color: #2196F3;
+}
+
+/* Vízszintes scrollbar */
+.scroll-bar:horizontal .track {
+    -fx-background-color: #EEEEEE;
+    -fx-background-radius: 4;
+}
+
+.scroll-bar:horizontal .thumb {
+    -fx-background-color: #BDBDBD;
+    -fx-background-radius: 4;
+}
+
+/* ==========================================
+   RESPONSIVE DESIGN
+   ========================================== */
+
+.main-container {
+    -fx-min-width: 800;
+    -fx-min-height: 600;
+    -fx-pref-width: 1200;
+    -fx-pref-height: 800;
+}
+
+/* ==========================================
+   SÖTÉT TÉMA FELÜLÍRÁSOK
+   ========================================== */
+
+.root.dark-theme .main-container {
+    -fx-background-color: #303030;
+}
+
+.root.dark-theme .main-menubar {
+    -fx-background-color: #424242;
+    -fx-border-color: transparent transparent #616161 transparent;
+}
+
+.root.dark-theme .main-menubar .menu {
+    -fx-text-fill: #FFFFFF;
+}
+
+.root.dark-theme .main-menubar .menu:hover {
+    -fx-background-color: #90CAF9;
+    -fx-text-fill: #42A5F5;
+}
+
+.root.dark-theme .main-tabpane {
+    -fx-background-color: #303030;
+}
+
+.root.dark-theme .main-tab {
+    -fx-text-fill: #BDBDBD;
+}
+
+.root.dark-theme .main-tab:selected {
+    -fx-background-color: #303030;
+    -fx-text-fill: #64B5F6;
+    -fx-border-color: #64B5F6 #64B5F6 transparent #64B5F6;
+}
+
+.root.dark-theme .tab-content {
+    -fx-background-color: #303030;
+}
+
+.root.dark-theme .label {
+    -fx-text-fill: #FFFFFF;
+}
+
+.root.dark-theme .text-field, .root.dark-theme .date-picker {
+    -fx-background-color: #303030;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: #616161;
+}
+
+.root.dark-theme .main-table {
+    -fx-background-color: #303030;
+    -fx-border-color: #616161;
+}
+
+/* Sötét téma felülírások táblázatokhoz */
+.root.dark-theme .main-table .table-row-cell {
+    -fx-background-color: #303030;
+    -fx-text-fill: #E0E0E0;
+}
+
+.root.dark-theme .main-table .table-row-cell:odd {
+    -fx-background-color: #424242;
+}
+
+.root.dark-theme .main-table .table-cell {
+    -fx-text-fill: #E0E0E0;
+}
+
+.root.dark-theme .table-column-name .table-cell {
+    -fx-text-fill: #90CAF9;
+}
+
+.root.dark-theme .table-column-currency .table-cell {
+    -fx-text-fill: #81C784;
+}
+
+.root.dark-theme .table-column-id .table-cell {
+    -fx-text-fill: #BDBDBD;
+}
+
+.root.dark-theme .table-column-date .table-cell {
+    -fx-text-fill: #FFAB91;
+}
