@@ -3,67 +3,98 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.input.KeyCodeCombination?>
 
 <?import com.employeemanager.component.StatusBar?>
-<VBox spacing="10" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
-      fx:controller="com.employeemanager.controller.MainViewController">
+<VBox spacing="0" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.employeemanager.controller.MainViewController"
+      styleClass="main-container">
 
-    <padding>
-        <Insets top="20" right="20" bottom="20" left="20"/>
-    </padding>
+    <MenuBar styleClass="main-menubar">
+        <!-- Fájl menü -->
+        <Menu text="Fájl">
+            <MenuItem text="Új alkalmazott" onAction="#showAddEmployeeDialog">
+                <accelerator>
+                    <KeyCodeCombination alt="UP" code="N" control="DOWN" meta="UP" shift="UP" shortcut="UP"/>
+                </accelerator>
+            </MenuItem>
+            <MenuItem text="Új munkanapló" onAction="#showAddWorkRecordDialog">
+                <accelerator>
+                    <KeyCodeCombination alt="UP" code="M" control="DOWN" meta="UP" shift="UP" shortcut="UP"/>
+                </accelerator>
+            </MenuItem>
+        </Menu>
 
-    <MenuBar>
-        <Menu text="Alkalmazottak">
-            <MenuItem text="Új alkalmazott" onAction="#showAddEmployeeDialog"/>
-            <MenuItem text="Alkalmazottak listája" onAction="#showEmployeeList"/>
-            <MenuItem text="Keresés" onAction="#showEmployeeSearch"/>
+        <!-- Szerkesztés menü -->
+        <Menu text="Szerkesztés">
+            <MenuItem text="Alkalmazott szerkesztése" onAction="#editSelectedEmployee">
+                <accelerator>
+                    <KeyCodeCombination alt="UP" code="T" control="DOWN" meta="UP" shift="UP" shortcut="UP"/>
+                </accelerator>
+            </MenuItem>
+            <MenuItem text="Munkanapló szerkesztése" onAction="#editSelectedWorkRecord">
+                <accelerator>
+                    <KeyCodeCombination alt="UP" code="R" control="DOWN" meta="UP" shift="UP" shortcut="UP"/>
+                </accelerator>
+            </MenuItem>
+        </Menu>
+
+        <!-- Nézet menü -->
+        <Menu text="Nézet">
+            <MenuItem text="Alkalmazottak" onAction="#showEmployeeTab"/>
+            <MenuItem text="Munkanaplók" onAction="#showWorkRecordTab"/>
+            <MenuItem text="Riportok" onAction="#showReportsTab"/>
+        </Menu>
+
+        <!-- Eszközök menü -->
+        <Menu text="Eszközök">
+            <MenuItem text="Adatbázis kapcsolat beállító" onAction="#showDatabaseSettings"/>
             <SeparatorMenuItem/>
-            <MenuItem text="Kilépés" onAction="#exitApplication"/>
-        </Menu>
-        <Menu text="Havi nyilvántartás">
-            <MenuItem text="Új munkanapló" onAction="#showAddWorkRecordDialog"/>
-            <MenuItem text="Havi áttekintés" onAction="#showMonthlyOverview"/>
-            <MenuItem text="Keresés időszakban" onAction="#showWorkRecordSearch"/>
-        </Menu>
-        <Menu text="Riportok">
-            <MenuItem text="Havi összesítő" onAction="#generateMonthlyReport"/>
-            <MenuItem text="Alkalmazotti kimutatás" onAction="#generateEmployeeReport"/>
-            <MenuItem text="Egyéni riport készítése" onAction="#showCustomReportDialog"/>
-            <SeparatorMenuItem/>
-            <MenuItem text="Exportálás Excelbe" onAction="#exportToExcel"/>
-        </Menu>
-        <Menu text="Beállítások">
-            <MenuItem text="Általános beállítások" onAction="#showSettings"/>
-        </Menu>
-        <Menu text="Súgó">
-            <MenuItem text="Használati útmutató" onAction="#showUserGuide"/>
+            <MenuItem text="Használati útmutató" onAction="#showUserGuide">
+                <accelerator>
+                    <KeyCodeCombination alt="UP" code="F1" control="UP" meta="UP" shift="UP" shortcut="UP"/>
+                </accelerator>
+            </MenuItem>
             <MenuItem text="Névjegy" onAction="#showAboutDialog"/>
         </Menu>
     </MenuBar>
 
-    <TabPane VBox.vgrow="ALWAYS">
+    <TabPane VBox.vgrow="ALWAYS" styleClass="main-tabpane" fx:id="mainTabPane">
         <!-- Alkalmazottak kezelése tab -->
-        <Tab text="Alkalmazottak" closable="false">
-            <VBox spacing="10">
-                <HBox spacing="10" alignment="CENTER_LEFT">
-                    <TextField fx:id="employeeSearchField" promptText="Keresés név szerint..." HBox.hgrow="ALWAYS"/>
-                    <Button text="Keresés" onAction="#searchEmployees"/>
-                    <Button text="Új alkalmazott" onAction="#showAddEmployeeDialog"/>
+        <Tab text="Alkalmazottak" closable="false" styleClass="main-tab">
+            <VBox spacing="15" styleClass="tab-content">
+                <padding>
+                    <Insets top="20" right="20" bottom="20" left="20"/>
+                </padding>
+
+                <HBox spacing="15" alignment="CENTER_LEFT" styleClass="search-toolbar">
+                    <TextField fx:id="employeeSearchField" promptText="Keresés név szerint..."
+                               HBox.hgrow="ALWAYS" styleClass="search-field"/>
+                    <Button text="Keresés" onAction="#searchEmployees" styleClass="primary-button"/>
+                    <Button text="Új alkalmazott" onAction="#showAddEmployeeDialog" styleClass="accent-button"/>
                 </HBox>
-                
-                <TableView fx:id="employeeTable" VBox.vgrow="ALWAYS">
+
+                <TableView fx:id="employeeTable" VBox.vgrow="ALWAYS" styleClass="main-table">
                     <columns>
-                        <TableColumn fx:id="idColumn" text="ID"/>
-                        <TableColumn fx:id="nameColumn" text="Név"/>
-                        <TableColumn fx:id="birthPlaceColumn" text="Születési hely"/>
-                        <TableColumn fx:id="birthDateColumn" text="Születési idő"/>
-                        <TableColumn fx:id="motherNameColumn" text="Anyja neve"/>
-                        <TableColumn fx:id="taxNumberColumn" text="Adószám"/>
-                        <TableColumn fx:id="socialSecurityColumn" text="TAJ szám"/>
-                        <TableColumn fx:id="addressColumn" text="Lakcím"/>
+                        <TableColumn fx:id="idColumn" text="ID" styleClass="table-column-id"
+                                     prefWidth="80" minWidth="80" maxWidth="80"/>
+                        <TableColumn fx:id="nameColumn" text="Név" styleClass="table-column-name"
+                                     prefWidth="150" minWidth="120"/>
+                        <TableColumn fx:id="birthPlaceColumn" text="Születési hely" styleClass="table-column-text"
+                                     prefWidth="120" minWidth="100"/>
+                        <TableColumn fx:id="birthDateColumn" text="Születési idő" styleClass="table-column-date"
+                                     prefWidth="110" minWidth="100"/>
+                        <TableColumn fx:id="motherNameColumn" text="Anyja neve" styleClass="table-column-text"
+                                     prefWidth="150" minWidth="120"/>
+                        <TableColumn fx:id="taxNumberColumn" text="Adószám" styleClass="table-column-number"
+                                     prefWidth="110" minWidth="100"/>
+                        <TableColumn fx:id="socialSecurityColumn" text="TAJ szám" styleClass="table-column-number"
+                                     prefWidth="100" minWidth="90"/>
+                        <TableColumn fx:id="addressColumn" text="Lakcím" styleClass="table-column-text"
+                                     prefWidth="200" minWidth="150"/>
                     </columns>
                     <contextMenu>
-                        <ContextMenu>
+                        <ContextMenu styleClass="context-menu">
                             <items>
                                 <MenuItem text="Szerkesztés" onAction="#showEditEmployeeDialog"/>
                                 <MenuItem text="Törlés" onAction="#deleteEmployee"/>
@@ -76,31 +107,42 @@
         </Tab>
 
         <!-- Havi nyilvántartás tab -->
-        <Tab text="Havi nyilvántartás" closable="false">
-            <VBox spacing="10">
-                <HBox spacing="10" alignment="CENTER_LEFT">
-                    <Label text="Időszak:"/>
-                    <DatePicker fx:id="startDatePicker"/>
-                    <Label text="-"/>
-                    <DatePicker fx:id="endDatePicker"/>
-                    <Button text="Szűrés" onAction="#filterWorkRecords"/>
+        <Tab text="Munkanaplók" closable="false" styleClass="main-tab">
+            <VBox spacing="15" styleClass="tab-content">
+                <padding>
+                    <Insets top="20" right="20" bottom="20" left="20"/>
+                </padding>
+
+                <HBox spacing="15" alignment="CENTER_LEFT" styleClass="filter-toolbar">
+                    <Label text="Időszak:" styleClass="toolbar-label"/>
+                    <DatePicker fx:id="startDatePicker" styleClass="date-picker"/>
+                    <Label text="-" styleClass="toolbar-separator"/>
+                    <DatePicker fx:id="endDatePicker" styleClass="date-picker"/>
+                    <Button text="Szűrés" onAction="#filterWorkRecords" styleClass="primary-button"/>
                     <Region HBox.hgrow="ALWAYS"/>
-                    <Button text="Új munkanapló" onAction="#showAddWorkRecordDialog"/>
-                    <Button text="Exportálás" onAction="#exportToExcel"/>
+                    <Button text="Új munkanapló" onAction="#showAddWorkRecordDialog" styleClass="accent-button"/>
+                    <Button text="Exportálás" onAction="#exportToExcel" styleClass="secondary-button"/>
                 </HBox>
-                
-                <TableView fx:id="workRecordTable" VBox.vgrow="ALWAYS">
+
+                <TableView fx:id="workRecordTable" VBox.vgrow="ALWAYS" styleClass="main-table">
                     <columns>
-                        <TableColumn fx:id="workIdColumn" text="ID"/>
-                        <TableColumn fx:id="employeeNameColumn" text="Alkalmazott"/>
-                        <TableColumn fx:id="notificationDateColumn" text="Bejelentés dátuma"/>
-                        <TableColumn fx:id="ebevSerialColumn" text="EBEV azonosító"/>
-                        <TableColumn fx:id="workDateColumn" text="Munkanap"/>
-                        <TableColumn fx:id="paymentColumn" text="Bérezés"/>
-                        <TableColumn fx:id="hoursWorkedColumn" text="Munkaórák"/>
+                        <TableColumn fx:id="workIdColumn" text="ID" styleClass="table-column-id"
+                                     prefWidth="80" minWidth="80" maxWidth="80"/>
+                        <TableColumn fx:id="employeeNameColumn" text="Alkalmazott" styleClass="table-column-name"
+                                     prefWidth="150" minWidth="120"/>
+                        <TableColumn fx:id="notificationDateColumn" text="Bejelentés dátuma" styleClass="table-column-date"
+                                     prefWidth="130" minWidth="110"/>
+                        <TableColumn fx:id="ebevSerialColumn" text="EBEV azonosító" styleClass="table-column-number"
+                                     prefWidth="120" minWidth="100"/>
+                        <TableColumn fx:id="workDateColumn" text="Munkanap" styleClass="table-column-date"
+                                     prefWidth="110" minWidth="100"/>
+                        <TableColumn fx:id="paymentColumn" text="Bérezés" styleClass="table-column-currency"
+                                     prefWidth="100" minWidth="80"/>
+                        <TableColumn fx:id="hoursWorkedColumn" text="Munkaórák" styleClass="table-column-number"
+                                     prefWidth="90" minWidth="70"/>
                     </columns>
                     <contextMenu>
-                        <ContextMenu>
+                        <ContextMenu styleClass="context-menu">
                             <items>
                                 <MenuItem text="Szerkesztés" onAction="#showEditWorkRecordDialog"/>
                                 <MenuItem text="Törlés" onAction="#deleteWorkRecord"/>
@@ -109,46 +151,58 @@
                     </contextMenu>
                 </TableView>
 
-                <HBox spacing="10" alignment="CENTER_RIGHT">
-                    <Label text="Összesítés:"/>
-                    <Label text="Összes munkaóra:"/>
-                    <Label fx:id="totalHoursLabel" style="-fx-font-weight: bold;"/>
-                    <Label text="Összes kifizetés:"/>
-                    <Label fx:id="totalPaymentLabel" style="-fx-font-weight: bold;"/>
+                <HBox spacing="15" alignment="CENTER_RIGHT" styleClass="summary-toolbar">
+                    <Label text="Összesítés:" styleClass="summary-label"/>
+                    <Label text="Összes munkaóra:" styleClass="summary-text"/>
+                    <Label fx:id="totalHoursLabel" styleClass="summary-value"/>
+                    <Label text="Összes kifizetés:" styleClass="summary-text"/>
+                    <Label fx:id="totalPaymentLabel" styleClass="summary-value"/>
                 </HBox>
             </VBox>
         </Tab>
 
         <!-- Riportok tab -->
-        <Tab text="Riportok" closable="false">
-            <VBox spacing="10">
-                <TitledPane text="Riport beállítások" expanded="true">
-                    <VBox spacing="10">
-                        <HBox spacing="10" alignment="CENTER_LEFT">
-                            <Label text="Időszak:"/>
-                            <DatePicker fx:id="reportStartDate"/>
-                            <Label text="-"/>
-                            <DatePicker fx:id="reportEndDate"/>
+        <Tab text="Riportok" closable="false" styleClass="main-tab">
+            <VBox spacing="15" styleClass="tab-content">
+                <padding>
+                    <Insets top="20" right="20" bottom="20" left="20"/>
+                </padding>
+
+                <TitledPane text="Riport beállítások" expanded="true" styleClass="settings-pane">
+                    <VBox spacing="12">
+                        <padding>
+                            <Insets top="15" right="15" bottom="15" left="15"/>
+                        </padding>
+
+                        <HBox spacing="15" alignment="CENTER_LEFT">
+                            <Label text="Időszak:" styleClass="settings-label"/>
+                            <DatePicker fx:id="reportStartDate" styleClass="date-picker"/>
+                            <Label text="-" styleClass="toolbar-separator"/>
+                            <DatePicker fx:id="reportEndDate" styleClass="date-picker"/>
                         </HBox>
-                        <HBox spacing="10" alignment="CENTER_LEFT">
-                            <CheckBox fx:id="includeEmployeeDetails" text="Alkalmazotti adatok"/>
-                            <CheckBox fx:id="includeWorkRecords" text="Munkanaplók"/>
-                            <CheckBox fx:id="includeSummary" text="Összesítés"/>
+
+                        <HBox spacing="20" alignment="CENTER_LEFT">
+                            <CheckBox fx:id="includeEmployeeDetails" text="Alkalmazotti adatok" styleClass="settings-checkbox"/>
+                            <CheckBox fx:id="includeWorkRecords" text="Munkanaplók" styleClass="settings-checkbox"/>
+                            <CheckBox fx:id="includeSummary" text="Összesítés" styleClass="settings-checkbox"/>
                         </HBox>
-                        <Button text="Riport generálása" onAction="#generateReport"/>
+
+                        <HBox alignment="CENTER_LEFT">
+                            <Button text="Riport generálása" onAction="#generateReport" styleClass="accent-button"/>
+                        </HBox>
                     </VBox>
                 </TitledPane>
-                
-                <ListView fx:id="reportList" VBox.vgrow="ALWAYS"/>
-                
-                <HBox spacing="10" alignment="CENTER_RIGHT">
-                    <Button text="Megnyitás" onAction="#openReport"/>
-                    <Button text="Exportálás" onAction="#exportReport"/>
-                    <Button text="Törlés" onAction="#deleteReport"/>
+
+                <ListView fx:id="reportList" VBox.vgrow="ALWAYS" styleClass="report-list"/>
+
+                <HBox spacing="15" alignment="CENTER_RIGHT" styleClass="action-toolbar">
+                    <Button text="Megnyitás" onAction="#openReport" styleClass="primary-button"/>
+                    <Button text="Exportálás" onAction="#exportReport" styleClass="secondary-button"/>
+                    <Button text="Törlés" onAction="#deleteReport" styleClass="danger-button"/>
                 </HBox>
             </VBox>
         </Tab>
     </TabPane>
 
-    <StatusBar fx:id="statusBar"/>
+    <StatusBar fx:id="statusBar" styleClass="status-bar"/>
 </VBox>
