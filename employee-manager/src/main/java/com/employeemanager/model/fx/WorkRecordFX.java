@@ -8,12 +8,13 @@ import lombok.Getter;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 public class WorkRecordFX {
     private final StringProperty id = new SimpleStringProperty();
     private final StringProperty employeeName = new SimpleStringProperty();
     private final ObjectProperty<LocalDate> notificationDate = new SimpleObjectProperty<>();
-    private final ObjectProperty<LocalDateTime> notificationTime = new SimpleObjectProperty<>();
+    private final ObjectProperty<LocalTime> notificationTime = new SimpleObjectProperty<>();
     private final StringProperty ebevSerialNumber = new SimpleStringProperty();
     private final ObjectProperty<LocalDate> workDate = new SimpleObjectProperty<>();
     private final ObjectProperty<BigDecimal> payment = new SimpleObjectProperty<>();
@@ -26,7 +27,7 @@ public class WorkRecordFX {
     public WorkRecordFX() {
         // Új munkanapló esetén beállítjuk az alapértelmezett értékeket
         setNotificationDate(LocalDate.now());
-        setNotificationTime(LocalDateTime.now());
+        setNotificationTime(LocalTime.now());
     }
 
     public WorkRecordFX(WorkRecord record) {
@@ -100,15 +101,15 @@ public class WorkRecordFX {
         return notificationDate;
     }
 
-    public LocalDateTime getNotificationTime() {
+    public LocalTime getNotificationTime() {
         return notificationTime.get();
     }
 
-    public void setNotificationTime(LocalDateTime time) {
+    public void setNotificationTime(LocalTime time) {
         this.notificationTime.set(time);
     }
 
-    public ObjectProperty<LocalDateTime> notificationTimeProperty() {
+    public ObjectProperty<LocalTime> notificationTimeProperty() {
         return notificationTime;
     }
 

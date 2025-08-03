@@ -3,6 +3,7 @@ package com.employeemanager.service.impl;
 import com.employeemanager.model.Employee;
 import com.employeemanager.model.WorkRecord;
 import com.employeemanager.repository.interfaces.EmployeeRepository;
+import com.employeemanager.repository.interfaces.WorkRecordRepository;
 import com.employeemanager.service.exception.ServiceException;
 import com.employeemanager.service.interfaces.EmployeeService;
 import com.employeemanager.service.interfaces.WorkRecordService;
@@ -12,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
@@ -22,6 +24,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     private static final Logger logger = LoggerFactory.getLogger(EmployeeServiceImpl.class);
     private final EmployeeRepository employeeRepository;
     private final WorkRecordService workRecordService;
+    private final WorkRecordRepository workRecordRepository;
 
     @Override
     public Employee save(Employee employee) throws ServiceException {
@@ -159,6 +162,40 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
+    public List<WorkRecord> addWorkRecords(List<WorkRecord> workRecords) throws ServiceException {
+        if (workRecords == null || workRecords.isEmpty()) {
+            throw new ServiceException("No work records to add");
+        }
+
+        try {
+            List<WorkRecord> savedRecords = new ArrayList<>();
+
+            // Ellenőrizzük minden rekordnál az alkalmazottat
+            for (WorkRecord record : workRecords) {
+                if (record.getEmployee() == null) {
+                    throw new ServiceException("Invalid work record data - missing employee");
+                }
+
+                Optional<Employee> employee = findById(record.getEmployee().getId());
+                if (employee.isEmpty()) {
+                    throw new ServiceException("Employee not found: " + record.getEmployee().getId());
+                }
+
+                if (!workRecordService.validateWorkRecord(record)) {
+                    throw new ServiceException("Invalid work record data");
+                }
+            }
+
+            // Batch mentés
+            return workRecordService.saveAll(workRecords);
+
+        } catch (Exception e) {
+            logger.error("Error adding multiple work records", e);
+            throw new ServiceException("Failed to add work records", e);
+        }
+    }
+
+    @Override
     public List<WorkRecord> getMonthlyRecords(LocalDate startDate, LocalDate endDate) throws ServiceException {
         return workRecordService.getMonthlyRecords(startDate, endDate);
     }
@@ -171,5 +208,27 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public void deleteWorkRecord(String id) throws ServiceException {
         workRecordService.deleteById(id);
+    }
+
+    @Override
+    public List<WorkRecord> getRecordsByNotificationDate(LocalDate startDate, LocalDate endDate) throws ServiceException {
+        try {
+            return workRecordRepository.findByNotificationDateBetween(startDate, endDate);
+        } catch (ExecutionException | InterruptedException e) {
+            logger.error("Error getting records by notification date", e);
+            throw new ServiceException("Failed to get records by notification date", e);
+        }
+    }
+
+    @Override
+    public List<WorkRecord> getRecordsByBothDates(LocalDate notifStart, LocalDate notifEnd,
+                                                  LocalDate workStart, LocalDate workEnd) throws ServiceException {
+        try {
+            return workRecordRepository.findByNotificationDateAndWorkDateBetween(
+                    notifStart, notifEnd, workStart, workEnd);
+        } catch (ExecutionException | InterruptedException e) {
+            logger.error("Error getting records by both dates", e);
+            throw new ServiceException("Failed to get records by both dates", e);
+        }
     }
 }

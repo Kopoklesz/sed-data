@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -28,7 +29,7 @@ public class WorkRecord {
     private LocalDate notificationDate;
 
     @Transient
-    private LocalDateTime notificationTime;
+    private LocalTime notificationTime;
 
     @Column(name = "ebev_serial", nullable = false)
     private String ebevSerialNumber;
@@ -51,7 +52,7 @@ public class WorkRecord {
             createdAt = LocalDateTime.now();
         }
         if (notificationTime == null) {
-            notificationTime = LocalDateTime.now();
+            notificationTime = LocalTime.now();
         }
     }
 
@@ -64,7 +65,7 @@ public class WorkRecord {
         map.put("employeeId", employee != null ? employee.getId() : null);
         map.put("employeeName", employee != null ? employee.getName() : null);
         map.put("notificationDate", FirebaseDateConverter.dateToString(notificationDate));
-        map.put("notificationTime", FirebaseDateConverter.dateTimeToString(notificationTime));
+        map.put("notificationTime", FirebaseDateConverter.timeToString(notificationTime));
         map.put("ebevSerialNumber", ebevSerialNumber);
         map.put("workDate", FirebaseDateConverter.dateToString(workDate));
         map.put("payment", payment != null ? payment.toString() : "0");
@@ -80,7 +81,7 @@ public class WorkRecord {
         WorkRecord record = new WorkRecord();
         record.setId((String) map.get("id"));
         record.setNotificationDate(FirebaseDateConverter.stringToDate((String) map.get("notificationDate")));
-        record.setNotificationTime(FirebaseDateConverter.stringToDateTime((String) map.get("notificationTime")));
+        record.setNotificationTime(FirebaseDateConverter.stringToTime((String) map.get("notificationTime")));
         record.setEbevSerialNumber((String) map.get("ebevSerialNumber"));
         record.setWorkDate(FirebaseDateConverter.stringToDate((String) map.get("workDate")));
 

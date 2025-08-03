@@ -27,7 +27,13 @@ public interface EmployeeService extends BaseService<Employee, String> {
 
     // Munkanapló kezelés
     WorkRecord addWorkRecord(WorkRecord workRecord) throws ServiceException;
+    List<WorkRecord> addWorkRecords(List<WorkRecord> workRecords) throws ServiceException;
     List<WorkRecord> getMonthlyRecords(LocalDate startDate, LocalDate endDate) throws ServiceException;
     List<WorkRecord> getEmployeeMonthlyRecords(String employeeId, LocalDate startDate, LocalDate endDate) throws ServiceException;
     void deleteWorkRecord(String id) throws ServiceException;
+
+    // Új metódusok a szűréshez
+    List<WorkRecord> getRecordsByNotificationDate(LocalDate startDate, LocalDate endDate) throws ServiceException;
+    List<WorkRecord> getRecordsByBothDates(LocalDate notifStart, LocalDate notifEnd,
+                                           LocalDate workStart, LocalDate workEnd) throws ServiceException;
 }

@@ -168,4 +168,92 @@ public class FirebaseWorkRecordRepository extends BaseFirebaseRepository<WorkRec
             throw new ExecutionException("Failed to fetch work records", e);
         }
     }
+
+    @Override
+    public List<WorkRecord> findByNotificationDateBetween(LocalDate startDate, LocalDate endDate)
+            throws ExecutionException, InterruptedException {
+
+        try {
+            QuerySnapshot querySnapshot = firestore.collection(collectionName)
+                    .get()
+                    .get();
+
+            return querySnapshot.getDocuments().stream()
+                    .map(doc -> {
+                        Map<String, Object> data = doc.getData();
+                        if (data != null) {
+                            data.put("id", doc.getId());
+                            return convertFromMap(data);
+                        }
+                        return null;
+                    })
+                    .filter(Objects::nonNull)
+                    .filter(record -> {
+                        LocalDate notificationDate = record.getNotificationDate();
+                        return notificationDate != null &&
+                                !notificationDate.isBefore(startDate) &&
+                                !notificationDate.isAfter(endDate);
+                    })
+                    .sorted((r1, r2) -> {
+                        LocalDate d1 = r1.getNotificationDate();
+                        LocalDate d2 = r2.getNotificationDate();
+                        if (d1 == null) return 1;
+                        if (d2 == null) return -1;
+                        return d2.compareTo(d1);
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error fetching work records by notification date: {}", e.getMessage(), e);
+            throw new ExecutionException("Failed to fetch work records", e);
+        }
+    }
+
+    @Override
+    public List<WorkRecord> findByNotificationDateAndWorkDateBetween(
+            LocalDate notifStart, LocalDate notifEnd,
+            LocalDate workStart, LocalDate workEnd)
+            throws ExecutionException, InterruptedException {
+
+        try {
+            QuerySnapshot querySnapshot = firestore.collection(collectionName)
+                    .get()
+                    .get();
+
+            return querySnapshot.getDocuments().stream()
+                    .map(doc -> {
+                        Map<String, Object> data = doc.getData();
+                        if (data != null) {
+                            data.put("id", doc.getId());
+                            return convertFromMap(data);
+                        }
+                        return null;
+                    })
+                    .filter(Objects::nonNull)
+                    .filter(record -> {
+                        LocalDate notificationDate = record.getNotificationDate();
+                        LocalDate workDate = record.getWorkDate();
+
+                        boolean notifInRange = notificationDate != null &&
+                                !notificationDate.isBefore(notifStart) &&
+                                !notificationDate.isAfter(notifEnd);
+
+                        boolean workInRange = workDate != null &&
+                                !workDate.isBefore(workStart) &&
+                                !workDate.isAfter(workEnd);
+
+                        return notifInRange && workInRange;
+                    })
+                    .sorted((r1, r2) -> {
+                        LocalDate d1 = r1.getWorkDate();
+                        LocalDate d2 = r2.getWorkDate();
+                        if (d1 == null) return 1;
+                        if (d2 == null) return -1;
+                        return d2.compareTo(d1);
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error fetching work records by both dates: {}", e.getMessage(), e);
+            throw new ExecutionException("Failed to fetch work records", e);
+        }
+    }
 }
