@@ -10,6 +10,11 @@
       fx:controller="com.employeemanager.controller.MainViewController"
       styleClass="main-container">
 
+    <!-- ToggleGroup definíció az elején -->
+    <fx:define>
+        <ToggleGroup fx:id="filterGroup"/>
+    </fx:define>
+
     <MenuBar styleClass="main-menubar">
         <!-- Fájl menü -->
         <Menu text="Fájl">
@@ -113,16 +118,27 @@
                     <Insets top="20" right="20" bottom="20" left="20"/>
                 </padding>
 
-                <HBox spacing="15" alignment="CENTER_LEFT" styleClass="filter-toolbar">
-                    <Label text="Időszak:" styleClass="toolbar-label"/>
-                    <DatePicker fx:id="startDatePicker" styleClass="date-picker"/>
-                    <Label text="-" styleClass="toolbar-separator"/>
-                    <DatePicker fx:id="endDatePicker" styleClass="date-picker"/>
-                    <Button text="Szűrés" onAction="#filterWorkRecords" styleClass="primary-button"/>
-                    <Region HBox.hgrow="ALWAYS"/>
-                    <Button text="Új munkanapló" onAction="#showAddWorkRecordDialog" styleClass="accent-button"/>
-                    <Button text="Exportálás" onAction="#exportToExcel" styleClass="secondary-button"/>
-                </HBox>
+                <VBox spacing="10">
+                    <!-- Szűrési opciók -->
+                    <HBox spacing="15" alignment="CENTER_LEFT" styleClass="filter-toolbar">
+                        <Label text="Szűrés:" styleClass="toolbar-label"/>
+                        <RadioButton fx:id="filterByNotificationDate" text="Bejelentés dátuma" toggleGroup="$filterGroup" selected="true"/>
+                        <RadioButton fx:id="filterByWorkDate" text="Munkanap" toggleGroup="$filterGroup"/>
+                        <RadioButton fx:id="filterByBoth" text="Mindkettő" toggleGroup="$filterGroup"/>
+                    </HBox>
+
+                    <!-- Dátum szűrők és gombok -->
+                    <HBox spacing="15" alignment="CENTER_LEFT" styleClass="filter-toolbar">
+                        <Label text="Időszak:" styleClass="toolbar-label"/>
+                        <DatePicker fx:id="startDatePicker" styleClass="date-picker"/>
+                        <Label text="-" styleClass="toolbar-separator"/>
+                        <DatePicker fx:id="endDatePicker" styleClass="date-picker"/>
+                        <Button text="Szűrés" onAction="#filterWorkRecords" styleClass="primary-button"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Button text="Új munkanapló" onAction="#showAddWorkRecordDialog" styleClass="accent-button"/>
+                        <Button text="Exportálás" onAction="#exportToExcel" styleClass="secondary-button"/>
+                    </HBox>
+                </VBox>
 
                 <TableView fx:id="workRecordTable" VBox.vgrow="ALWAYS" styleClass="main-table">
                     <columns>
@@ -132,6 +148,8 @@
                                      prefWidth="150" minWidth="120"/>
                         <TableColumn fx:id="notificationDateColumn" text="Bejelentés dátuma" styleClass="table-column-date"
                                      prefWidth="130" minWidth="110"/>
+                        <TableColumn fx:id="notificationTimeColumn" text="Bejelentés ideje" styleClass="table-column-date"
+                                     prefWidth="110" minWidth="100"/>
                         <TableColumn fx:id="ebevSerialColumn" text="EBEV azonosító" styleClass="table-column-number"
                                      prefWidth="120" minWidth="100"/>
                         <TableColumn fx:id="workDateColumn" text="Munkanap" styleClass="table-column-date"

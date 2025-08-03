@@ -2,6 +2,7 @@ package com.employeemanager.util;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
@@ -14,6 +15,7 @@ public class FirebaseDateConverter {
     // Egységes dátum formátum az egész alkalmazásban
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
     /**
      * LocalDate konvertálása String-re Firebase tároláshoz
@@ -65,6 +67,28 @@ public class FirebaseDateConverter {
     }
 
     /**
+     * LocalTime konvertálása String-re Firebase tároláshoz
+     */
+    public static String timeToString(LocalTime time) {
+        return time != null ? time.format(TIME_FORMATTER) : null;
+    }
+
+    /**
+     * String konvertálása LocalTime-ra Firebase-ből való olvasáskor
+     */
+    public static LocalTime stringToTime(String timeStr) {
+        if (timeStr == null || timeStr.trim().isEmpty()) {
+            return null;
+        }
+
+        try {
+            return LocalTime.parse(timeStr, TIME_FORMATTER);
+        } catch (DateTimeParseException e) {
+            return null;
+        }
+    }
+
+    /**
      * Ellenőrzi, hogy érvényes dátum string-e
      */
     public static boolean isValidDateString(String dateStr) {
@@ -76,5 +100,12 @@ public class FirebaseDateConverter {
      */
     public static boolean isValidDateTimeString(String dateTimeStr) {
         return stringToDateTime(dateTimeStr) != null;
+    }
+
+    /**
+     * Ellenőrzi, hogy érvényes time string-e
+     */
+    public static boolean isValidTimeString(String timeStr) {
+        return stringToTime(timeStr) != null;
     }
 }

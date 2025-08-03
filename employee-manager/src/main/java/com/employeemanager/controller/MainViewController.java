@@ -27,6 +27,7 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -66,10 +67,17 @@ public class MainViewController implements Initializable {
     @FXML private TableColumn<WorkRecordFX, String> workIdColumn;
     @FXML private TableColumn<WorkRecordFX, String> employeeNameColumn;
     @FXML private TableColumn<WorkRecordFX, LocalDate> notificationDateColumn;
+    @FXML private TableColumn<WorkRecordFX, LocalTime> notificationTimeColumn;
     @FXML private TableColumn<WorkRecordFX, String> ebevSerialColumn;
     @FXML private TableColumn<WorkRecordFX, LocalDate> workDateColumn;
     @FXML private TableColumn<WorkRecordFX, BigDecimal> paymentColumn;
     @FXML private TableColumn<WorkRecordFX, Integer> hoursWorkedColumn;
+
+    // Szűrési radio buttonok
+    @FXML private RadioButton filterByNotificationDate;
+    @FXML private RadioButton filterByWorkDate;
+    @FXML private RadioButton filterByBoth;
+    @FXML private ToggleGroup filterGroup;
 
     // FXML injections for report tab
     @FXML private DatePicker reportStartDate;
@@ -108,8 +116,8 @@ public class MainViewController implements Initializable {
     @FXML
     private void showAddWorkRecordDialog() {
         if (isSafeToExecuteShortcut()) {
-            Dialog<WorkRecordFX> dialog = new WorkRecordDialog(employeeService);
-            dialog.showAndWait().ifPresent(this::saveWorkRecord);
+            Dialog<List<WorkRecordFX>> dialog = new WorkRecordDialog(employeeService);
+            dialog.showAndWait().ifPresent(this::saveWorkRecords);
         }
     }
 
@@ -159,8 +167,12 @@ public class MainViewController implements Initializable {
         }
 
         // Van kijelölve munkanapló -> szerkesztő dialógus
-        Dialog<WorkRecordFX> dialog = new WorkRecordDialog(employeeService, selectedRecord);
-        dialog.showAndWait().ifPresent(this::saveWorkRecord);
+        Dialog<List<WorkRecordFX>> dialog = new WorkRecordDialog(employeeService, selectedRecord);
+        dialog.showAndWait().ifPresent(records -> {
+            if (records != null && !records.isEmpty()) {
+                saveWorkRecords(records);
+            }
+        });
     }
 
     // ==========================================
@@ -314,10 +326,49 @@ public class MainViewController implements Initializable {
         workIdColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
         employeeNameColumn.setCellValueFactory(new PropertyValueFactory<>("employeeName"));
         notificationDateColumn.setCellValueFactory(new PropertyValueFactory<>("notificationDate"));
+        notificationTimeColumn.setCellValueFactory(new PropertyValueFactory<>("notificationTime"));
         ebevSerialColumn.setCellValueFactory(new PropertyValueFactory<>("ebevSerialNumber"));
         workDateColumn.setCellValueFactory(new PropertyValueFactory<>("workDate"));
         paymentColumn.setCellValueFactory(new PropertyValueFactory<>("payment"));
         hoursWorkedColumn.setCellValueFactory(new PropertyValueFactory<>("hoursWorked"));
+
+        // Dátum formázás
+        notificationDateColumn.setCellFactory(column -> new TableCell<WorkRecordFX, LocalDate>() {
+            @Override
+            protected void updateItem(LocalDate item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item.format(DateTimeFormatter.ISO_LOCAL_DATE));
+                }
+            }
+        });
+
+        workDateColumn.setCellFactory(column -> new TableCell<WorkRecordFX, LocalDate>() {
+            @Override
+            protected void updateItem(LocalDate item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item.format(DateTimeFormatter.ISO_LOCAL_DATE));
+                }
+            }
+        });
+
+        // Időpont formázás
+        notificationTimeColumn.setCellFactory(column -> new TableCell<WorkRecordFX, LocalTime>() {
+            @Override
+            protected void updateItem(LocalTime item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item.format(DateTimeFormatter.ofPattern("HH:mm")));
+                }
+            }
+        });
     }
 
     private void setupSearchField() {
@@ -341,6 +392,9 @@ public class MainViewController implements Initializable {
 
         reportStartDate.setValue(now.withDayOfMonth(1));
         reportEndDate.setValue(now.withDayOfMonth(now.lengthOfMonth()));
+
+        // Bejelentés dátuma legyen az alapértelmezett szűrés
+        filterByNotificationDate.setSelected(true);
     }
 
     private void loadInitialData() {
@@ -373,14 +427,22 @@ public class MainViewController implements Initializable {
         }
     }
 
-    private void saveWorkRecord(WorkRecordFX workRecordFX) {
+    private void saveWorkRecords(List<WorkRecordFX> workRecordFXList) {
+        if (workRecordFXList == null || workRecordFXList.isEmpty()) {
+            return;
+        }
+
         try {
-            WorkRecord savedRecord = employeeService.addWorkRecord(workRecordFX.toWorkRecord());
+            List<WorkRecord> workRecords = workRecordFXList.stream()
+                    .map(WorkRecordFX::toWorkRecord)
+                    .collect(Collectors.toList());
+
+            List<WorkRecord> savedRecords = employeeService.addWorkRecords(workRecords);
             filterWorkRecords();
-            updateStatus("Munkanapló mentve");
+            updateStatus(savedRecords.size() + " munkanapló mentve");
         } catch (Exception e) {
-            AlertHelper.showError("Hiba", "Nem sikerült menteni a munkanaplót", e.getMessage());
-            updateStatus("Hiba a munkanapló mentése közben");
+            AlertHelper.showError("Hiba", "Nem sikerült menteni a munkanaplókat", e.getMessage());
+            updateStatus("Hiba a munkanaplók mentése közben");
         }
     }
 
@@ -453,14 +515,23 @@ public class MainViewController implements Initializable {
         }
 
         try {
-            List<WorkRecord> workRecords = employeeService.getMonthlyRecords(start, end);
+            List<WorkRecord> workRecords;
+
+            if (filterByNotificationDate.isSelected()) {
+                workRecords = employeeService.getRecordsByNotificationDate(start, end);
+            } else if (filterByWorkDate.isSelected()) {
+                workRecords = employeeService.getMonthlyRecords(start, end);
+            } else { // Mindkettő
+                workRecords = employeeService.getRecordsByBothDates(start, end, start, end);
+            }
+
             List<WorkRecordFX> workRecordFXList = workRecords.stream()
                     .map(WorkRecordFX::new)
                     .collect(Collectors.toList());
 
             workRecordTable.setItems(FXCollections.observableArrayList(workRecordFXList));
             updateSummary(workRecordFXList);
-            updateStatus("Munkanaplók szűrve");
+            updateStatus("Munkanaplók szűrve (" + workRecordFXList.size() + " találat)");
         } catch (Exception e) {
             AlertHelper.showError("Hiba", "Nem sikerült szűrni a munkanaplókat", e.getMessage());
             updateStatus("Hiba a munkanaplók szűrése közben");
