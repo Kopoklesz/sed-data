@@ -1,5 +1,6 @@
 package com.employeemanager.controller;
 
+import com.employeemanager.config.DatabaseConnectionManager;
 import com.employeemanager.dialog.EmployeeDialog;
 import com.employeemanager.dialog.SettingsDialog;
 import com.employeemanager.dialog.UserGuideDialog;
@@ -42,6 +43,7 @@ public class MainViewController implements Initializable {
     private final ReportService reportService;
     private final SettingsService settingsService;
     private final ExcelExporter excelExporter;
+    private final DatabaseConnectionManager connectionManager;
 
     // FXML injections for main TabPane
     @FXML private TabPane mainTabPane;

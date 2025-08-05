@@ -5,6 +5,7 @@ import com.employeemanager.repository.interfaces.EmployeeRepository;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QuerySnapshot;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import java.util.Map;
@@ -13,6 +14,7 @@ import java.util.concurrent.ExecutionException;
 
 @Repository
 @Slf4j
+@ConditionalOnProperty(name = "database.type", havingValue = "FIREBASE", matchIfMissing = true)
 public class FirebaseEmployeeRepository extends BaseFirebaseRepository<Employee> implements EmployeeRepository {
 
     public FirebaseEmployeeRepository(Firestore firestore) {

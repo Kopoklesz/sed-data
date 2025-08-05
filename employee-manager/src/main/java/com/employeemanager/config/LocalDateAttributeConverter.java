@@ -2,19 +2,19 @@ package com.employeemanager.config;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
+import java.sql.Date;
+import java.time.LocalDate;
 
 @Converter(autoApply = true)
-public class LocalDateTimeAttributeConverter implements AttributeConverter<LocalDateTime, Timestamp> {
+public class LocalDateAttributeConverter implements AttributeConverter<LocalDate, Date> {
 
     @Override
-    public Timestamp convertToDatabaseColumn(LocalDateTime locDateTime) {
-        return locDateTime == null ? null : Timestamp.valueOf(locDateTime);
+    public Date convertToDatabaseColumn(LocalDate locDate) {
+        return locDate == null ? null : Date.valueOf(locDate);
     }
 
     @Override
-    public LocalDateTime convertToEntityAttribute(Timestamp sqlTimestamp) {
-        return sqlTimestamp == null ? null : sqlTimestamp.toLocalDateTime();
+    public LocalDate convertToEntityAttribute(Date sqlDate) {
+        return sqlDate == null ? null : sqlDate.toLocalDate();
     }
 }

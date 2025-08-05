@@ -11,6 +11,7 @@ import com.google.cloud.firestore.QuerySnapshot;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 
 @Repository
 @Slf4j
+@ConditionalOnProperty(name = "database.type", havingValue = "FIREBASE", matchIfMissing = true)
 public class FirebaseWorkRecordRepository extends BaseFirebaseRepository<WorkRecord> implements WorkRecordRepository {
 
     private final EmployeeRepository employeeRepository;

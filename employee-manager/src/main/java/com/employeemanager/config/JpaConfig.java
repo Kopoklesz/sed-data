@@ -1,5 +1,7 @@
 package com.employeemanager.config;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,6 +21,7 @@ import java.util.Properties;
 @EnableJpaRepositories(basePackages = "com.employeemanager.repository")
 @ConditionalOnProperty(name = "database.type", havingValue = "MYSQL", matchIfMissing = false)
 @ConditionalOnProperty(name = "database.type", havingValue = "POSTGRESQL", matchIfMissing = false)
+private LocalDate birthDate;
 public class JpaConfig {
 
     @Bean
