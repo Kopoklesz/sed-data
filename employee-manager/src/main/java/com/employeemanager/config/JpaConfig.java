@@ -1,8 +1,6 @@
 package com.employeemanager.config;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
@@ -12,16 +10,14 @@ import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
-import javax.persistence.EntityManagerFactory;
+import jakarta.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
 import java.util.Properties;
 
 @Configuration
 @EnableTransactionManagement
 @EnableJpaRepositories(basePackages = "com.employeemanager.repository")
-@ConditionalOnProperty(name = "database.type", havingValue = "MYSQL", matchIfMissing = false)
-@ConditionalOnProperty(name = "database.type", havingValue = "POSTGRESQL", matchIfMissing = false)
-private LocalDate birthDate;
+@ConditionalOnExpression("'${database.type}' == 'MYSQL' or '${database.type}' == 'POSTGRESQL'")
 public class JpaConfig {
 
     @Bean

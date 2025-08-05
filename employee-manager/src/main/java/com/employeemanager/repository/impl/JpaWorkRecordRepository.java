@@ -3,14 +3,14 @@ package com.employeemanager.repository.impl;
 import com.employeemanager.model.WorkRecord;
 import com.employeemanager.repository.interfaces.WorkRecordRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
-import javax.persistence.TypedQuery;
-import javax.transaction.Transactional;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.TypedQuery;
+import jakarta.transaction.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -21,8 +21,7 @@ import java.util.concurrent.ExecutionException;
 @Slf4j
 @Repository
 @Primary
-@ConditionalOnProperty(name = "database.type", havingValue = "MYSQL", matchIfMissing = false)
-@ConditionalOnProperty(name = "database.type", havingValue = "POSTGRESQL", matchIfMissing = false)
+@ConditionalOnExpression("'${database.type}' == 'MYSQL' or '${database.type}' == 'POSTGRESQL'")
 @Transactional
 public class JpaWorkRecordRepository implements WorkRecordRepository {
 

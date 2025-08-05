@@ -3,14 +3,14 @@ package com.employeemanager.repository.impl;
 import com.employeemanager.model.Employee;
 import com.employeemanager.repository.interfaces.EmployeeRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
-import javax.persistence.TypedQuery;
-import javax.transaction.Transactional;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.TypedQuery;
+import jakarta.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,8 +20,7 @@ import java.util.concurrent.ExecutionException;
 @Slf4j
 @Repository
 @Primary
-@ConditionalOnProperty(name = "database.type", havingValue = "MYSQL", matchIfMissing = false)
-@ConditionalOnProperty(name = "database.type", havingValue = "POSTGRESQL", matchIfMissing = false)
+@ConditionalOnExpression("'${database.type}' == 'MYSQL' or '${database.type}' == 'POSTGRESQL'")
 @Transactional
 public class JpaEmployeeRepository implements EmployeeRepository {
 
@@ -31,14 +30,15 @@ public class JpaEmployeeRepository implements EmployeeRepository {
     @Override
     public Employee save(Employee entity) throws ExecutionException, InterruptedException {
         return CompletableFuture.supplyAsync(() -> {
+            Employee managedEntity = entity;
             if (entity.getId() == null || entity.getId().isEmpty()) {
                 entity.setId(UUID.randomUUID().toString());
                 entityManager.persist(entity);
             } else {
-                entity = entityManager.merge(entity);
+                managedEntity = entityManager.merge(entity);
             }
             entityManager.flush();
-            return entity;
+            return managedEntity;
         }).get();
     }
 
