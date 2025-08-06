@@ -16,6 +16,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import javax.sql.DataSource;
 import java.io.File;
 import java.io.FileInputStream;
@@ -49,7 +50,8 @@ public class DatabaseConnectionManager {
     private DataSource currentDataSource;
     private Firestore currentFirestore;
 
-    public DatabaseConnectionManager() {
+    @PostConstruct
+    public void init() {
         loadSavedConnections();
     }
 

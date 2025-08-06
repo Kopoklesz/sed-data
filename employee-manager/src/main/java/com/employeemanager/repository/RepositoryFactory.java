@@ -43,8 +43,13 @@ public class RepositoryFactory {
                             connectionManager.getCurrentFirestore(), employeeRepository);
                 } else {
                     // Fallback to Spring managed beans
-                    employeeRepository = applicationContext.getBean(FirebaseEmployeeRepository.class);
-                    workRecordRepository = applicationContext.getBean(FirebaseWorkRecordRepository.class);
+                    try {
+                        employeeRepository = applicationContext.getBean(FirebaseEmployeeRepository.class);
+                        workRecordRepository = applicationContext.getBean(FirebaseWorkRecordRepository.class);
+                    } catch (Exception e) {
+                        log.error("Failed to get Firebase repositories from Spring context", e);
+                        throw new RuntimeException("Firebase repositories not available", e);
+                    }
                 }
                 break;
 
@@ -54,9 +59,8 @@ public class RepositoryFactory {
                     employeeRepository = applicationContext.getBean(JpaEmployeeRepository.class);
                     workRecordRepository = applicationContext.getBean(JpaWorkRecordRepository.class);
                 } catch (Exception e) {
-                    log.warn("JPA repositories not available, creating new instances");
-                    employeeRepository = new JpaEmployeeRepository();
-                    workRecordRepository = new JpaWorkRecordRepository();
+                    log.warn("JPA repositories not available, this might be a configuration issue");
+                    throw new RuntimeException("JPA repositories not available. Make sure database connection is properly configured.", e);
                 }
                 break;
         }

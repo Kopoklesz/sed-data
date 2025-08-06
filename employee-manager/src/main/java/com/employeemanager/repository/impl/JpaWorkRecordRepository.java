@@ -31,14 +31,15 @@ public class JpaWorkRecordRepository implements WorkRecordRepository {
     @Override
     public WorkRecord save(WorkRecord entity) throws ExecutionException, InterruptedException {
         return CompletableFuture.supplyAsync(() -> {
+            WorkRecord managedEntity = entity;
             if (entity.getId() == null || entity.getId().isEmpty()) {
                 entity.setId(UUID.randomUUID().toString());
                 entityManager.persist(entity);
             } else {
-                entity = entityManager.merge(entity);
+                managedEntity = entityManager.merge(entity);
             }
             entityManager.flush();
-            return entity;
+            return managedEntity;
         }).get();
     }
 

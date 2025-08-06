@@ -1,0 +1,104 @@
+/* Settings Dialog Custom Styles */
+
+.settings-dialog .dialog-pane {
+    -fx-background-color: #f8f9fa;
+    -fx-border-radius: 15;
+    -fx-background-radius: 15;
+}
+
+.settings-dialog .dialog-pane > .button-bar > .container {
+    -fx-background-color: #f8f9fa;
+}
+
+/* Combo boxes */
+.settings-dialog .combo-box {
+    -fx-background-color: white;
+    -fx-border-color: #e0e0e0;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-padding: 8 12;
+    -fx-font-size: 14px;
+}
+
+.settings-dialog .combo-box:hover {
+    -fx-border-color: #2196F3;
+}
+
+.settings-dialog .combo-box:focused {
+    -fx-border-color: #2196F3;
+    -fx-border-width: 2;
+}
+
+/* Text fields */
+.settings-dialog .text-field {
+    -fx-background-color: white;
+    -fx-border-color: #e0e0e0;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-padding: 8 12;
+    -fx-font-size: 14px;
+}
+
+.settings-dialog .text-field:hover {
+    -fx-border-color: #2196F3;
+}
+
+.settings-dialog .text-field:focused {
+    -fx-border-color: #2196F3;
+    -fx-border-width: 2;
+}
+
+/* Buttons */
+.settings-dialog .button {
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-padding: 10 20;
+    -fx-font-size: 14px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 2, 0, 0, 1);
+}
+
+.settings-dialog .button:hover {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 4, 0, 0, 2);
+    -fx-scale-x: 1.02;
+    -fx-scale-y: 1.02;
+}
+
+.settings-dialog .button:pressed {
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}
+
+/* Progress indicator */
+.settings-dialog .progress-indicator {
+    -fx-progress-color: #2196F3;
+}
+
+/* Separators */
+.settings-dialog .separator {
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 10 0 10 0;
+}
+
+/* Labels */
+.settings-dialog .label {
+    -fx-text-fill: #333;
+}
+
+/* Panels hover effect */
+.settings-dialog > * > * {
+    -fx-transition: all 0.3s ease;
+}
+
+/* Close button style */
+.settings-dialog .dialog-pane > .button-bar > .container > .button {
+    -fx-background-color: #f44336;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-min-width: 100;
+}
+
+.settings-dialog .dialog-pane > .button-bar > .container > .button:hover {
+    -fx-background-color: #d32f2f;
+}

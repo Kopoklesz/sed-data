@@ -90,7 +90,7 @@ public class JpaEmployeeRepository implements EmployeeRepository {
                     "SELECT e FROM Employee e WHERE e.taxNumber = :taxNumber", Employee.class);
             query.setParameter("taxNumber", taxNumber);
             List<Employee> results = query.getResultList();
-            return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
+            return results.isEmpty() ? Optional.<Employee>empty() : Optional.of(results.get(0));
         }).get();
     }
 
@@ -101,7 +101,7 @@ public class JpaEmployeeRepository implements EmployeeRepository {
                     "SELECT e FROM Employee e WHERE e.socialSecurityNumber = :ssn", Employee.class);
             query.setParameter("ssn", ssn);
             List<Employee> results = query.getResultList();
-            return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
+            return results.isEmpty() ? Optional.<Employee>empty() : Optional.of(results.get(0));
         }).get();
     }
 }

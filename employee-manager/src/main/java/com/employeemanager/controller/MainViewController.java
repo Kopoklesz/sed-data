@@ -205,15 +205,14 @@ public class MainViewController implements Initializable {
 
     @FXML
     private void showDatabaseSettings() {
-        // Placeholder implementation - később kerül implementálásra
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Fejlesztés alatt");
-        alert.setHeaderText("Adatbázis kapcsolat beállító");
-        alert.setContentText("Ez a funkció hamarosan elérhető lesz.\n\n" +
-                "Itt lehetőség lesz majd különböző adatbázisokhoz való csatlakozásra " +
-                "és a kapcsolat paramétereinek beállítására.");
-        alert.showAndWait();
-        updateStatus("Adatbázis beállítások - fejlesztés alatt");
+        try {
+            Dialog<Void> dialog = new SettingsDialog(settingsService, connectionManager);
+            dialog.showAndWait();
+            updateStatus("Adatbázis beállítások megjelenítve");
+        } catch (Exception e) {
+            AlertHelper.showError("Hiba", "Nem sikerült megnyitni a beállításokat", e.getMessage());
+            updateStatus("Hiba a beállítások megnyitása közben");
+        }
     }
 
     @FXML
