@@ -14,6 +14,7 @@ import com.employeemanager.service.impl.ReportService;
 import com.employeemanager.service.impl.SettingsService;
 import com.employeemanager.util.AlertHelper;
 import com.employeemanager.util.ExcelExporter;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
@@ -21,6 +22,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.stage.Stage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 
@@ -100,11 +102,52 @@ public class MainViewController implements Initializable {
         setupSearchField();
         setupDatePickers();
         loadInitialData();
-        updateStatus("Alkalmazás betöltve");
+
+        // Add window event listener for refresh
+        Platform.runLater(() -> {
+            Stage stage = (Stage) mainTabPane.getScene().getWindow();
+            if (stage != null) {
+                stage.addEventHandler(javafx.stage.WindowEvent.WINDOW_SHOWN, event -> {
+                    // This will be triggered when settings dialog signals a refresh
+                    if (event.getTarget() == stage) {
+                        refreshData();
+                    }
+                });
+            }
+        });
+
+        updateStatus("Alkalmazás betöltve - Aktív kapcsolat: " +
+                (connectionManager.getActiveConnection() != null ?
+                        connectionManager.getActiveConnection().getProfileName() + " (" +
+                                connectionManager.getActiveConnection().getType().getDisplayName() + ")" :
+                        "Nincs"));
+    }
+
+    public void refreshData() {
+        Platform.runLater(() -> {
+            try {
+                updateStatus("Adatok frissítése...");
+
+                // Clear current data
+                employeeTable.getItems().clear();
+                workRecordTable.getItems().clear();
+                reportList.getItems().clear();
+
+                // Reload all data
+                loadInitialData();
+
+                updateStatus("Adatok frissítve - Aktív kapcsolat: " +
+                        connectionManager.getActiveConnection().getProfileName() + " (" +
+                        connectionManager.getActiveConnection().getType().getDisplayName() + ")");
+            } catch (Exception e) {
+                AlertHelper.showError("Hiba", "Nem sikerült frissíteni az adatokat", e.getMessage());
+                updateStatus("Hiba az adatok frissítése közben");
+            }
+        });
     }
 
     // ==========================================
-    // ÚJ MENÜ AKCIÓK - FÁJL MENÜ
+    // MENÜ AKCIÓK - FÁJL MENÜ
     // ==========================================
 
     @FXML
@@ -124,7 +167,7 @@ public class MainViewController implements Initializable {
     }
 
     // ==========================================
-    // ÚJ MENÜ AKCIÓK - SZERKESZTÉS MENÜ
+    // MENÜ AKCIÓK - SZERKESZTÉS MENÜ
     // ==========================================
 
     @FXML
@@ -136,7 +179,6 @@ public class MainViewController implements Initializable {
         EmployeeFX selectedEmployee = employeeTable.getSelectionModel().getSelectedItem();
 
         if (selectedEmployee == null) {
-            // Nincs kijelölve alkalmazott -> átváltás alkalmazottak tab-ra
             showEmployeeTab();
             updateStatus("Válasszon ki egy alkalmazottat a szerkesztéshez");
             AlertHelper.showInformation("Alkalmazott szerkesztése",
@@ -145,7 +187,6 @@ public class MainViewController implements Initializable {
             return;
         }
 
-        // Van kijelölve alkalmazott -> szerkesztő dialógus
         Dialog<EmployeeFX> dialog = new EmployeeDialog(selectedEmployee);
         dialog.showAndWait().ifPresent(this::saveEmployee);
     }
@@ -159,7 +200,6 @@ public class MainViewController implements Initializable {
         WorkRecordFX selectedRecord = workRecordTable.getSelectionModel().getSelectedItem();
 
         if (selectedRecord == null) {
-            // Nincs kijelölve munkanapló -> átváltás munkanaplók tab-ra
             showWorkRecordTab();
             updateStatus("Válasszon ki egy munkanaplót a szerkesztéshez");
             AlertHelper.showInformation("Munkanapló szerkesztése",
@@ -168,7 +208,6 @@ public class MainViewController implements Initializable {
             return;
         }
 
-        // Van kijelölve munkanapló -> szerkesztő dialógus
         Dialog<List<WorkRecordFX>> dialog = new WorkRecordDialog(employeeService, selectedRecord);
         dialog.showAndWait().ifPresent(records -> {
             if (records != null && !records.isEmpty()) {
@@ -178,29 +217,29 @@ public class MainViewController implements Initializable {
     }
 
     // ==========================================
-    // ÚJ MENÜ AKCIÓK - NÉZET MENÜ
+    // MENÜ AKCIÓK - NÉZET MENÜ
     // ==========================================
 
     @FXML
     private void showEmployeeTab() {
-        mainTabPane.getSelectionModel().select(0); // Első tab: Alkalmazottak
+        mainTabPane.getSelectionModel().select(0);
         updateStatus("Alkalmazottak tab megjelenítve");
     }
 
     @FXML
     private void showWorkRecordTab() {
-        mainTabPane.getSelectionModel().select(1); // Második tab: Munkanaplók
+        mainTabPane.getSelectionModel().select(1);
         updateStatus("Munkanaplók tab megjelenítve");
     }
 
     @FXML
     private void showReportsTab() {
-        mainTabPane.getSelectionModel().select(2); // Harmadik tab: Riportok
+        mainTabPane.getSelectionModel().select(2);
         updateStatus("Riportok tab megjelenítve");
     }
 
     // ==========================================
-    // ÚJ MENÜ AKCIÓK - ESZKÖZÖK MENÜ
+    // MENÜ AKCIÓK - ESZKÖZÖK MENÜ
     // ==========================================
 
     @FXML
@@ -242,34 +281,20 @@ public class MainViewController implements Initializable {
     }
 
     // ==========================================
-    // SEGÉD METÓDUSOK A BIZTONSÁGOS MŰKÖDÉSHEZ
+    // SEGÉD METÓDUSOK
     // ==========================================
 
-    /**
-     * Ellenőrzi, hogy biztonságos-e végrehajtani a gyorsbillentyű akciót.
-     * Gépelés közben (TextField/TextArea fókuszban van) ne aktiválódjanak a shortcuts.
-     */
     private boolean isSafeToExecuteShortcut() {
         Node focusedNode = mainTabPane.getScene().getFocusOwner();
-
         if (focusedNode instanceof TextInputControl) {
-            // Ha TextField, TextArea vagy más szövegbeviteli mező van fókuszban,
-            // ne hajtsuk végre a shortcut-ot
             return false;
         }
-
         return true;
     }
 
-    // ==========================================
-    // EREDETI METÓDUSOK - FRISSÍTVE
-    // ==========================================
-
     private void setupEmployeeTable() {
-        // Column resize policy beállítása Java kódban
         employeeTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        // Sor magasság beállítása a jobb vertikális középre igazításhoz
         employeeTable.setRowFactory(tv -> {
             TableRow<EmployeeFX> row = new TableRow<>();
             row.setPrefHeight(40);
@@ -285,7 +310,6 @@ public class MainViewController implements Initializable {
         socialSecurityColumn.setCellValueFactory(new PropertyValueFactory<>("socialSecurityNumber"));
         addressColumn.setCellValueFactory(new PropertyValueFactory<>("address"));
 
-        // Dátum formázás a táblázatban
         birthDateColumn.setCellFactory(column -> new TableCell<EmployeeFX, LocalDate>() {
             @Override
             protected void updateItem(LocalDate item, boolean empty) {
@@ -298,14 +322,11 @@ public class MainViewController implements Initializable {
             }
         });
 
-        // Dupla kattintás esemény - váltás a munkanaplók tab-ra
         employeeTable.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2 && !employeeTable.getSelectionModel().isEmpty()) {
                 EmployeeFX selectedEmployee = employeeTable.getSelectionModel().getSelectedItem();
                 if (selectedEmployee != null) {
-                    // Betöltjük a munkanaplókat
                     loadEmployeeWorkRecords(selectedEmployee);
-                    // Átváltunk a Munkanaplók tab-ra
                     showWorkRecordTab();
                     updateStatus("Megjelenítve: " + selectedEmployee.getName() + " munkanaplói");
                 }
@@ -314,10 +335,8 @@ public class MainViewController implements Initializable {
     }
 
     private void setupWorkRecordTable() {
-        // Column resize policy beállítása Java kódban
         workRecordTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        // Sor magasság beállítása a jobb vertikális középre igazításhoz
         workRecordTable.setRowFactory(tv -> {
             TableRow<WorkRecordFX> row = new TableRow<>();
             row.setPrefHeight(40);
@@ -333,7 +352,6 @@ public class MainViewController implements Initializable {
         paymentColumn.setCellValueFactory(new PropertyValueFactory<>("payment"));
         hoursWorkedColumn.setCellValueFactory(new PropertyValueFactory<>("hoursWorked"));
 
-        // Dátum formázás
         notificationDateColumn.setCellFactory(column -> new TableCell<WorkRecordFX, LocalDate>() {
             @Override
             protected void updateItem(LocalDate item, boolean empty) {
@@ -358,7 +376,6 @@ public class MainViewController implements Initializable {
             }
         });
 
-        // Időpont formázás
         notificationTimeColumn.setCellFactory(column -> new TableCell<WorkRecordFX, LocalTime>() {
             @Override
             protected void updateItem(LocalTime item, boolean empty) {
@@ -394,7 +411,6 @@ public class MainViewController implements Initializable {
         reportStartDate.setValue(now.withDayOfMonth(1));
         reportEndDate.setValue(now.withDayOfMonth(now.lengthOfMonth()));
 
-        // Bejelentés dátuma legyen az alapértelmezett szűrés
         filterByNotificationDate.setSelected(true);
     }
 
@@ -448,12 +464,12 @@ public class MainViewController implements Initializable {
     }
 
     // ==========================================
-    // EREDETI CONTEXT MENU ÉS EGYÉB AKCIÓK
+    // CONTEXT MENU ÉS EGYÉB AKCIÓK
     // ==========================================
 
     @FXML
     private void showEditEmployeeDialog() {
-        editSelectedEmployee(); // Újrafelhasználjuk az intelligens szerkesztést
+        editSelectedEmployee();
     }
 
     @FXML
@@ -480,7 +496,7 @@ public class MainViewController implements Initializable {
 
     @FXML
     private void showEditWorkRecordDialog() {
-        editSelectedWorkRecord(); // Újrafelhasználjuk az intelligens szerkesztést
+        editSelectedWorkRecord();
     }
 
     @FXML
@@ -522,7 +538,7 @@ public class MainViewController implements Initializable {
                 workRecords = employeeService.getRecordsByNotificationDate(start, end);
             } else if (filterByWorkDate.isSelected()) {
                 workRecords = employeeService.getMonthlyRecords(start, end);
-            } else { // Mindkettő
+            } else {
                 workRecords = employeeService.getRecordsByBothDates(start, end, start, end);
             }
 
@@ -636,10 +652,6 @@ public class MainViewController implements Initializable {
         }
     }
 
-    // ==========================================
-    // EGYÉB AKCIÓK
-    // ==========================================
-
     @FXML
     private void searchEmployees() {
         String searchText = employeeSearchField.getText();
@@ -672,7 +684,6 @@ public class MainViewController implements Initializable {
         }
 
         try {
-            // TODO: Implement report opening logic
             updateStatus("Riport megnyitása: " + selectedReport);
             AlertHelper.showInformation("Riport megnyitása",
                     "Fejlesztés alatt",
@@ -691,7 +702,6 @@ public class MainViewController implements Initializable {
         }
 
         try {
-            // TODO: Implement report export logic
             updateStatus("Riport exportálása: " + selectedReport);
             AlertHelper.showInformation("Riport exportálása",
                     "Fejlesztés alatt",
@@ -713,7 +723,6 @@ public class MainViewController implements Initializable {
                 "Biztosan törli a kiválasztott riportot?",
                 "Ez a művelet nem vonható vissza.")) {
             try {
-                // TODO: Implement report deletion logic
                 loadReportList();
                 updateStatus("Riport törölve: " + selectedReport);
                 AlertHelper.showInformation("Riport törölve",

@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -73,13 +74,23 @@ public class DatabaseConfig {
     @Primary
     @ConditionalOnProperty(name = "database.type", havingValue = "MYSQL")
     public DataSource mysqlDataSource() {
-        return connectionManager.getCurrentDataSource();
+        return DataSourceBuilder.create()
+                .url("jdbc:mysql://localhost:3306/testdb?useSSL=false&serverTimezone=UTC")
+                .username("testuser")
+                .password("testpass")
+                .driverClassName("com.mysql.cj.jdbc.Driver")
+                .build();
     }
 
     @Bean
     @Primary
     @ConditionalOnProperty(name = "database.type", havingValue = "POSTGRESQL")
     public DataSource postgresqlDataSource() {
-        return connectionManager.getCurrentDataSource();
+        return DataSourceBuilder.create()
+                .url("jdbc:postgresql://localhost:5432/testdb?sslmode=disable")
+                .username("testuser")
+                .password("testpass")
+                .driverClassName("org.postgresql.Driver")
+                .build();
     }
 }

@@ -16,9 +16,13 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
+@Slf4j
 public class SettingsDialog extends Dialog<Void> {
 
     private final SettingsService settingsService;
@@ -26,8 +30,8 @@ public class SettingsDialog extends Dialog<Void> {
 
     // Existing connections tab components
     private ListView<DatabaseConnectionConfig> connectionsList;
-    private Label connectionDetailsLabel;
     private Button connectButton;
+    private Button editConnectionButton;
     private Button deleteConnectionButton;
 
     // New connection tab components
@@ -51,9 +55,13 @@ public class SettingsDialog extends Dialog<Void> {
     private VBox firebasePanel;
     private VBox jdbcPanel;
 
-    // Status components
-    private Label statusLabel;
-    private ProgressIndicator progressIndicator;
+    // Tab pane reference
+    private TabPane mainTabPane;
+    private Tab newConnectionTab;
+
+    // Edit mode flag
+    private boolean isEditMode = false;
+    private DatabaseConnectionConfig editingConfig = null;
 
     public SettingsDialog(SettingsService settingsService, DatabaseConnectionManager connectionManager) {
         this.settingsService = settingsService;
@@ -70,31 +78,27 @@ public class SettingsDialog extends Dialog<Void> {
     private void setupDialog() {
         DialogPane dialogPane = getDialogPane();
         dialogPane.getButtonTypes().addAll(ButtonType.CLOSE);
-        dialogPane.setPrefWidth(700);
-        dialogPane.setPrefHeight(650);
+        dialogPane.setPrefWidth(900);  // Növelt szélesség
+        dialogPane.setPrefHeight(700); // Növelt magasság
 
         // Apply custom CSS
         dialogPane.getStylesheets().add(getClass().getResource("/css/settings-dialog.css").toExternalForm());
         dialogPane.getStyleClass().add("settings-dialog");
 
-        TabPane tabPane = new TabPane();
-        tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+        mainTabPane = new TabPane();
+        mainTabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
 
         // Existing connections tab
         Tab existingConnectionsTab = new Tab("📋 Meglévő kapcsolatok");
         existingConnectionsTab.setContent(createExistingConnectionsPanel());
 
         // New connection tab
-        Tab newConnectionTab = new Tab("➕ Új kapcsolat");
+        newConnectionTab = new Tab("➕ Új kapcsolat");
         newConnectionTab.setContent(createNewConnectionPanel());
 
-        tabPane.getTabs().addAll(existingConnectionsTab, newConnectionTab);
+        mainTabPane.getTabs().addAll(existingConnectionsTab, newConnectionTab);
 
-        // Status area at bottom
-        VBox mainContainer = new VBox(10);
-        mainContainer.getChildren().addAll(tabPane, createStatusArea());
-
-        dialogPane.setContent(mainContainer);
+        dialogPane.setContent(mainTabPane);
     }
 
     private VBox createExistingConnectionsPanel() {
@@ -107,24 +111,22 @@ public class SettingsDialog extends Dialog<Void> {
         headerLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
         headerLabel.setTextFill(Color.web("#2196F3"));
 
+        // Info label
+        Label infoLabel = new Label("Válasszon a mentett kapcsolatok közül:");
+        infoLabel.setFont(Font.font(14));
+
         // Connections list
         connectionsList = new ListView<>();
-        connectionsList.setPrefHeight(300);
+        connectionsList.setPrefHeight(400); // Növelt magasság
         connectionsList.setCellFactory(listView -> new ConnectionListCell());
         connectionsList.getSelectionModel().selectedItemProperty().addListener(
-                (obs, oldVal, newVal) -> updateConnectionDetails(newVal)
+                (obs, oldVal, newVal) -> updateButtonStates(newVal)
         );
-
-        // Connection details
-        connectionDetailsLabel = new Label("Válasszon ki egy kapcsolatot a részletekért");
-        connectionDetailsLabel.setStyle("-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 10;");
-        connectionDetailsLabel.setWrapText(true);
-        connectionDetailsLabel.setPrefHeight(100);
-        connectionDetailsLabel.setAlignment(Pos.TOP_LEFT);
 
         // Buttons
         HBox buttonBox = new HBox(15);
         buttonBox.setAlignment(Pos.CENTER);
+        buttonBox.setPadding(new Insets(20, 0, 0, 0));
 
         connectButton = new Button("🔌 Kapcsolódás");
         connectButton.setPrefWidth(180);
@@ -132,20 +134,24 @@ public class SettingsDialog extends Dialog<Void> {
         connectButton.setDisable(true);
         connectButton.setOnAction(e -> connectToSelectedDatabase());
 
-        deleteConnectionButton = new Button("🗑️ Törlés");
+        editConnectionButton = new Button("✏️ Szerkesztés");
+        editConnectionButton.setPrefWidth(180);
+        editConnectionButton.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px; -fx-padding: 10;");
+        editConnectionButton.setDisable(true);
+        editConnectionButton.setOnAction(e -> editSelectedConnection());
+
+        deleteConnectionButton = new Button("❌ Törlés");
         deleteConnectionButton.setPrefWidth(180);
         deleteConnectionButton.setStyle("-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px; -fx-padding: 10;");
         deleteConnectionButton.setDisable(true);
         deleteConnectionButton.setOnAction(e -> deleteSelectedConnection());
 
-        buttonBox.getChildren().addAll(connectButton, deleteConnectionButton);
+        buttonBox.getChildren().addAll(connectButton, editConnectionButton, deleteConnectionButton);
 
         panel.getChildren().addAll(
                 headerLabel,
-                new Label("Válasszon a mentett kapcsolatok közül:"),
+                infoLabel,
                 connectionsList,
-                new Label("Kapcsolat részletei:"),
-                connectionDetailsLabel,
                 buttonBox
         );
 
@@ -160,8 +166,10 @@ public class SettingsDialog extends Dialog<Void> {
         ScrollPane scrollPane = new ScrollPane();
         scrollPane.setFitToWidth(true);
         scrollPane.setStyle("-fx-background-color: transparent;");
+        scrollPane.setPadding(new Insets(0, 10, 0, 0)); // Jobb oldali padding hogy ne lógjon ki
 
         VBox content = new VBox(20);
+        content.setPadding(new Insets(0, 10, 0, 0)); // Extra padding a tartalom számára
 
         // Header
         Label headerLabel = new Label("➕ Új adatbázis kapcsolat létrehozása");
@@ -178,6 +186,9 @@ public class SettingsDialog extends Dialog<Void> {
         firebasePanel = createFirebasePanel();
         jdbcPanel = createJdbcPanel();
 
+        // Test connection templates
+        HBox templateButtons = createTemplateButtons();
+
         // Action buttons
         HBox actionButtons = createNewConnectionButtons();
 
@@ -185,6 +196,7 @@ public class SettingsDialog extends Dialog<Void> {
                 headerLabel,
                 nameBox,
                 typeSelector,
+                templateButtons,
                 new Separator(),
                 firebasePanel,
                 jdbcPanel,
@@ -198,10 +210,50 @@ public class SettingsDialog extends Dialog<Void> {
         return panel;
     }
 
+    private HBox createTemplateButtons() {
+        HBox box = new HBox(10);
+        box.setAlignment(Pos.CENTER);
+        box.setPadding(new Insets(10, 0, 10, 0));
+
+        Button mysqlTemplateBtn = new Button("🐬 Docker MySQL teszt kitöltése");
+        mysqlTemplateBtn.setStyle("-fx-background-color: #ff9800; -fx-text-fill: white; -fx-font-weight: bold;");
+        mysqlTemplateBtn.setOnAction(e -> fillMySQLTemplate());
+
+        Button postgresTemplateBtn = new Button("🐘 Docker PostgreSQL teszt kitöltése");
+        postgresTemplateBtn.setStyle("-fx-background-color: #607d8b; -fx-text-fill: white; -fx-font-weight: bold;");
+        postgresTemplateBtn.setOnAction(e -> fillPostgreSQLTemplate());
+
+        box.getChildren().addAll(mysqlTemplateBtn, postgresTemplateBtn);
+        return box;
+    }
+
+    private void fillMySQLTemplate() {
+        profileNameField.setText("Docker MySQL Test");
+        databaseTypeCombo.setValue(DatabaseType.MYSQL);
+        jdbcHostField.setText("localhost");
+        jdbcPortField.setText("3306");
+        jdbcDatabaseField.setText("testdb");
+        jdbcUsernameField.setText("testuser");
+        jdbcPasswordField.setText("testpass");
+        updateDatabasePanel();
+    }
+
+    private void fillPostgreSQLTemplate() {
+        profileNameField.setText("Docker PostgreSQL Test");
+        databaseTypeCombo.setValue(DatabaseType.POSTGRESQL);
+        jdbcHostField.setText("localhost");
+        jdbcPortField.setText("5432");
+        jdbcDatabaseField.setText("testdb");
+        jdbcUsernameField.setText("testuser");
+        jdbcPasswordField.setText("testpass");
+        updateDatabasePanel();
+    }
+
     private VBox createNameBox() {
         VBox box = new VBox(10);
         box.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 15;");
         box.setEffect(new javafx.scene.effect.DropShadow(5, Color.gray(0.3)));
+        box.setMaxWidth(850); // Max szélesség beállítása
 
         Label label = new Label("📝 Kapcsolat neve:");
         label.setFont(Font.font("System", FontWeight.BOLD, 14));
@@ -217,6 +269,7 @@ public class SettingsDialog extends Dialog<Void> {
         VBox box = new VBox(10);
         box.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 15;");
         box.setEffect(new javafx.scene.effect.DropShadow(5, Color.gray(0.3)));
+        box.setMaxWidth(850);
 
         Label label = new Label("Adatbázis típus:");
         label.setFont(Font.font("System", FontWeight.BOLD, 14));
@@ -261,6 +314,7 @@ public class SettingsDialog extends Dialog<Void> {
         VBox panel = new VBox(15);
         panel.setStyle("-fx-background-color: #fff8e1; -fx-background-radius: 10; -fx-padding: 15;");
         panel.setEffect(new javafx.scene.effect.DropShadow(5, Color.gray(0.3)));
+        panel.setMaxWidth(850);
 
         Label headerLabel = new Label("🔥 Firebase Beállítások");
         headerLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
@@ -272,7 +326,7 @@ public class SettingsDialog extends Dialog<Void> {
         fileLabel.setFont(Font.font("System", FontWeight.BOLD, 13));
 
         HBox fileInputBox = new HBox(10);
-        firebaseServiceAccountField.setPrefWidth(350);
+        firebaseServiceAccountField.setPrefWidth(650);
         firebaseServiceAccountField.setPromptText("Válassza ki a JSON fájlt...");
         firebaseBrowseButton.setStyle("-fx-background-color: #ff6f00; -fx-text-fill: white; -fx-font-weight: bold;");
         firebaseBrowseButton.setOnAction(e -> browseServiceAccountFile());
@@ -302,6 +356,7 @@ public class SettingsDialog extends Dialog<Void> {
         VBox panel = new VBox(15);
         panel.setStyle("-fx-background-color: #e3f2fd; -fx-background-radius: 10; -fx-padding: 15;");
         panel.setEffect(new javafx.scene.effect.DropShadow(5, Color.gray(0.3)));
+        panel.setMaxWidth(850);
 
         Label headerLabel = new Label("🗄️ Adatbázis Kapcsolat Beállítások");
         headerLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
@@ -316,6 +371,7 @@ public class SettingsDialog extends Dialog<Void> {
         hostLabel.setFont(Font.font("System", FontWeight.BOLD, 13));
         jdbcHostField.setPromptText("localhost vagy szerver címe");
         jdbcHostField.setText("localhost");
+        jdbcHostField.setPrefWidth(300);
         grid.add(hostLabel, 0, 0);
         grid.add(jdbcHostField, 1, 0);
 
@@ -331,6 +387,7 @@ public class SettingsDialog extends Dialog<Void> {
         Label dbLabel = new Label("Adatbázis:");
         dbLabel.setFont(Font.font("System", FontWeight.BOLD, 13));
         jdbcDatabaseField.setPromptText("employeemanager");
+        jdbcDatabaseField.setPrefWidth(400);
         grid.add(dbLabel, 0, 1);
         grid.add(jdbcDatabaseField, 1, 1, 3, 1);
 
@@ -338,6 +395,7 @@ public class SettingsDialog extends Dialog<Void> {
         Label userLabel = new Label("Felhasználónév:");
         userLabel.setFont(Font.font("System", FontWeight.BOLD, 13));
         jdbcUsernameField.setPromptText("adatbázis felhasználó");
+        jdbcUsernameField.setPrefWidth(400);
         grid.add(userLabel, 0, 2);
         grid.add(jdbcUsernameField, 1, 2, 3, 1);
 
@@ -345,6 +403,7 @@ public class SettingsDialog extends Dialog<Void> {
         Label passLabel = new Label("Jelszó:");
         passLabel.setFont(Font.font("System", FontWeight.BOLD, 13));
         jdbcPasswordField.setPromptText("••••••••");
+        jdbcPasswordField.setPrefWidth(400);
         grid.add(passLabel, 0, 3);
         grid.add(jdbcPasswordField, 1, 3, 3, 1);
 
@@ -371,21 +430,382 @@ public class SettingsDialog extends Dialog<Void> {
         return buttonBox;
     }
 
-    private HBox createStatusArea() {
-        HBox statusBox = new HBox(10);
-        statusBox.setAlignment(Pos.CENTER);
-        statusBox.setPadding(new Insets(10));
-        statusBox.setStyle("-fx-background-color: white; -fx-background-radius: 10;");
+    private void updateButtonStates(DatabaseConnectionConfig config) {
+        if (config == null) {
+            connectButton.setDisable(true);
+            editConnectionButton.setDisable(true);
+            deleteConnectionButton.setDisable(true);
+        } else {
+            connectButton.setDisable(config.isActive());
+            editConnectionButton.setDisable(false);
+            deleteConnectionButton.setDisable(config.isActive());
+        }
+    }
 
-        progressIndicator = new ProgressIndicator();
-        progressIndicator.setVisible(false);
-        progressIndicator.setPrefSize(20, 20);
+    private void editSelectedConnection() {
+        DatabaseConnectionConfig selected = connectionsList.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
 
-        statusLabel = new Label("Készen áll");
-        statusLabel.setFont(Font.font(13));
+        // Switch to new connection tab
+        mainTabPane.getSelectionModel().select(newConnectionTab);
 
-        statusBox.getChildren().addAll(progressIndicator, statusLabel);
-        return statusBox;
+        // Enter edit mode
+        isEditMode = true;
+        editingConfig = selected;
+
+        // Change tab title
+        newConnectionTab.setText("✏️ Kapcsolat szerkesztése");
+
+        // Fill fields with selected connection data
+        profileNameField.setText(selected.getProfileName());
+        databaseTypeCombo.setValue(selected.getType());
+
+        switch (selected.getType()) {
+            case FIREBASE:
+                firebaseServiceAccountField.setText(selected.getFirebaseServiceAccountPath());
+                firebaseProjectIdField.setText(selected.getFirebaseProjectId());
+                firebaseDatabaseUrlField.setText(selected.getFirebaseDatabaseUrl());
+                break;
+            case MYSQL:
+            case POSTGRESQL:
+                jdbcHostField.setText(selected.getJdbcHost());
+                jdbcPortField.setText(String.valueOf(selected.getJdbcPort()));
+                jdbcDatabaseField.setText(selected.getJdbcDatabase());
+                jdbcUsernameField.setText(selected.getJdbcUsername());
+                jdbcPasswordField.setText(selected.getJdbcPassword());
+                break;
+        }
+
+        updateDatabasePanel();
+    }
+
+    private void cancelEdit() {
+        isEditMode = false;
+        editingConfig = null;
+        newConnectionTab.setText("➕ Új kapcsolat");
+        clearNewConnectionFields();
+        mainTabPane.getSelectionModel().selectFirst();
+    }
+
+    private void connectToSelectedDatabase() {
+        DatabaseConnectionConfig selected = connectionsList.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+
+        if (!AlertHelper.showConfirmation("Kapcsolat váltás",
+                "Biztosan váltani szeretne erre a kapcsolatra?",
+                selected.getProfileName() + "\n\n" +
+                        "⚠️ Az alkalmazás újra fog indulni a kapcsolat váltásához!")) {
+            return;
+        }
+
+        // Create a progress dialog
+        Alert progressAlert = new Alert(Alert.AlertType.INFORMATION);
+        progressAlert.setTitle("Kapcsolódás");
+        progressAlert.setHeaderText("Kapcsolat váltás folyamatban...");
+        progressAlert.setContentText("Az alkalmazás újraindul...");
+        progressAlert.getButtonTypes().clear();
+
+        ProgressIndicator progressIndicator = new ProgressIndicator();
+        progressIndicator.setPrefSize(50, 50);
+        progressAlert.setGraphic(progressIndicator);
+
+        Task<Boolean> connectTask = new Task<Boolean>() {
+            @Override
+            protected Boolean call() throws Exception {
+                try {
+                    // Apply the connection (this saves it as active)
+                    connectionManager.applyConnection(selected);
+                    return true;
+                } catch (Exception e) {
+                    throw e;
+                }
+            }
+        };
+
+        connectTask.setOnSucceeded(e -> {
+            Platform.runLater(() -> {
+                try {
+                    progressAlert.close();
+                } catch (Exception ex) {
+                    // Ignore
+                }
+
+                // Show success message briefly
+                Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                successAlert.setTitle("Sikeres kapcsolódás");
+                successAlert.setHeaderText("Kapcsolat létrehozva!");
+                successAlert.setContentText("Az alkalmazás most újraindul...\n" +
+                        "Új kapcsolat: " + selected.getProfileName());
+                successAlert.show();
+
+                // Restart application after delay
+                Task<Void> restartTask = new Task<Void>() {
+                    @Override
+                    protected Void call() throws Exception {
+                        Thread.sleep(2000);
+                        return null;
+                    }
+                };
+
+                restartTask.setOnSucceeded(event -> {
+                    Platform.runLater(() -> {
+                        try {
+                            // Close all windows
+                            getDialogPane().getScene().getWindow().hide();
+                            successAlert.close();
+
+                            // Restart the application
+                            restartApplication();
+                        } catch (Exception ex) {
+                            log.error("Error during restart: {}", ex.getMessage());
+                        }
+                    });
+                });
+
+                new Thread(restartTask).start();
+            });
+        });
+
+        connectTask.setOnFailed(e -> {
+            Platform.runLater(() -> {
+                try {
+                    progressAlert.close();
+                } catch (Exception ex) {
+                    // Ignore
+                }
+                Throwable ex = connectTask.getException();
+                AlertHelper.showError("Kapcsolódási hiba",
+                        "Nem sikerült kapcsolódni",
+                        ex != null ? ex.getMessage() : "Ismeretlen hiba");
+            });
+        });
+
+        progressAlert.show();
+        new Thread(connectTask).start();
+    }
+
+    private void restartApplication() {
+        try {
+            // Get the command that started this application
+            String javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
+            String currentJar = new File(SettingsDialog.class.getProtectionDomain()
+                    .getCodeSource().getLocation().toURI()).getPath();
+
+            // Build command
+            List<String> command = new ArrayList<>();
+            command.add(javaBin);
+            command.add("-jar");
+            command.add(currentJar);
+
+            // Start new instance
+            ProcessBuilder builder = new ProcessBuilder(command);
+            builder.start();
+
+            // Exit current instance
+            System.exit(0);
+
+        } catch (Exception e) {
+            log.error("Failed to restart application: {}", e.getMessage());
+            // Fallback: just exit and let user restart manually
+            AlertHelper.showInformation("Újraindítás szükséges",
+                    "Kérem indítsa újra az alkalmazást",
+                    "A kapcsolat váltás érvénybe lépéséhez kérem indítsa újra manuálisan az alkalmazást.");
+            System.exit(0);
+        }
+    }
+
+    private void deleteSelectedConnection() {
+        DatabaseConnectionConfig selected = connectionsList.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+
+        if (selected.isActive()) {
+            AlertHelper.showWarning("Törlés nem lehetséges",
+                    "Az aktív kapcsolat nem törölhető.");
+            return;
+        }
+
+        if (AlertHelper.showConfirmation("Törlés megerősítése",
+                "Biztosan törli ezt a kapcsolatot?",
+                selected.getProfileName())) {
+            connectionManager.deleteConnection(selected);
+            loadConnections();
+            AlertHelper.showInformation("Sikeres törlés",
+                    "Kapcsolat törölve",
+                    selected.getProfileName() + " sikeresen törölve.");
+        }
+    }
+
+    private void testNewConnection() {
+        if (profileNameField.getText().trim().isEmpty()) {
+            AlertHelper.showWarning("Hiányzó adat",
+                    "Adjon meg egy nevet a kapcsolatnak!");
+            return;
+        }
+
+        DatabaseConnectionConfig config = createConfigFromFields();
+
+        // Create a progress dialog
+        Alert progressAlert = new Alert(Alert.AlertType.INFORMATION);
+        progressAlert.setTitle("Kapcsolat tesztelése");
+        progressAlert.setHeaderText("Tesztelés folyamatban...");
+        progressAlert.setContentText("Kapcsolódás: " + config.getType().getDisplayName() +
+                "\nHost: " + (config.getJdbcHost() != null ? config.getJdbcHost() : "N/A"));
+        progressAlert.getButtonTypes().clear();
+
+        // Add cancel button
+        ButtonType cancelButton = new ButtonType("Mégse", ButtonBar.ButtonData.CANCEL_CLOSE);
+        progressAlert.getButtonTypes().add(cancelButton);
+
+        ProgressIndicator progressIndicator = new ProgressIndicator();
+        progressIndicator.setPrefSize(50, 50);
+        progressAlert.setGraphic(progressIndicator);
+
+        Task<Boolean> testTask = new Task<Boolean>() {
+            @Override
+            protected Boolean call() throws Exception {
+                // Set timeout of 15 seconds for test
+                Thread currentThread = Thread.currentThread();
+                Thread timeoutThread = new Thread(() -> {
+                    try {
+                        Thread.sleep(15000); // 15 seconds timeout
+                        if (!currentThread.isInterrupted()) {
+                            currentThread.interrupt();
+                            cancel();
+                        }
+                    } catch (InterruptedException ignored) {}
+                });
+                timeoutThread.setDaemon(true);
+                timeoutThread.start();
+
+                try {
+                    return connectionManager.testConnection(config);
+                } finally {
+                    timeoutThread.interrupt();
+                }
+            }
+        };
+
+        testTask.setOnSucceeded(e -> {
+            Platform.runLater(() -> {
+                try {
+                    progressAlert.close();
+                } catch (Exception ex) {
+                    // Ignore close errors
+                }
+                boolean success = testTask.getValue();
+                if (success) {
+                    AlertHelper.showInformation("Teszt sikeres",
+                            "Kapcsolat teszt",
+                            "Sikeres kapcsolódás az adatbázishoz!\n" +
+                                    "Típus: " + config.getType().getDisplayName() + "\n" +
+                                    (config.getType() != DatabaseType.FIREBASE ?
+                                            "Host: " + config.getJdbcHost() + ":" + config.getJdbcPort() + "\n" +
+                                                    "Adatbázis: " + config.getJdbcDatabase() :
+                                            "Project: " + config.getFirebaseProjectId()));
+                } else {
+                    AlertHelper.showError("Teszt sikertelen",
+                            "Kapcsolat teszt",
+                            "Nem sikerült kapcsolódni az adatbázishoz.\n" +
+                                    "Ellenőrizze a kapcsolódási adatokat!");
+                }
+            });
+        });
+
+        testTask.setOnFailed(e -> {
+            Platform.runLater(() -> {
+                try {
+                    progressAlert.close();
+                } catch (Exception ex) {
+                    // Ignore close errors
+                }
+                Throwable ex = testTask.getException();
+                AlertHelper.showError("Teszt hiba",
+                        "Kapcsolat teszt",
+                        "Hiba történt a tesztelés során:\n" +
+                                (ex != null ? ex.getMessage() : "Ismeretlen hiba"));
+            });
+        });
+
+        testTask.setOnCancelled(e -> {
+            Platform.runLater(() -> {
+                try {
+                    progressAlert.close();
+                } catch (Exception ex) {
+                    // Ignore close errors
+                }
+                AlertHelper.showWarning("Megszakítva",
+                        "A tesztelés megszakítva vagy időtúllépés történt.");
+            });
+        });
+
+        // Handle dialog cancel button
+        progressAlert.setOnCloseRequest(event -> {
+            testTask.cancel(true);
+        });
+
+        progressAlert.show();
+        new Thread(testTask).start();
+    }
+
+    private void saveNewConnection() {
+        if (profileNameField.getText().trim().isEmpty()) {
+            AlertHelper.showWarning("Hiányzó adat",
+                    "Adjon meg egy nevet a kapcsolatnak!");
+            return;
+        }
+
+        DatabaseConnectionConfig config = createConfigFromFields();
+
+        // Check if name already exists (except in edit mode)
+        if (!isEditMode) {
+            boolean nameExists = connectionManager.getSavedConnections().stream()
+                    .anyMatch(c -> c.getProfileName().equals(config.getProfileName()));
+
+            if (nameExists) {
+                AlertHelper.showWarning("Duplikált név",
+                        "Már létezik kapcsolat ezzel a névvel!");
+                return;
+            }
+        }
+
+        Task<Void> saveTask = new Task<Void>() {
+            @Override
+            protected Void call() throws Exception {
+                if (isEditMode) {
+                    connectionManager.updateConnection(config);
+                } else {
+                    connectionManager.saveConnection(config);
+                }
+                return null;
+            }
+        };
+
+        saveTask.setOnSucceeded(e -> {
+            Platform.runLater(() -> {
+                AlertHelper.showInformation("Sikeres mentés",
+                        isEditMode ? "Kapcsolat módosítva" : "Kapcsolat elmentve",
+                        config.getProfileName());
+
+                if (isEditMode) {
+                    cancelEdit();
+                } else {
+                    clearNewConnectionFields();
+                }
+
+                loadConnections();
+                mainTabPane.getSelectionModel().selectFirst();
+            });
+        });
+
+        saveTask.setOnFailed(e -> {
+            Platform.runLater(() -> {
+                AlertHelper.showError("Mentési hiba",
+                        "Nem sikerült menteni",
+                        "Hiba történt a mentés során.");
+            });
+        });
+
+        new Thread(saveTask).start();
     }
 
     private void updateDatabasePanel() {
@@ -432,207 +852,6 @@ public class SettingsDialog extends Dialog<Void> {
         }
     }
 
-    private void updateConnectionDetails(DatabaseConnectionConfig config) {
-        if (config == null) {
-            connectionDetailsLabel.setText("Válasszon ki egy kapcsolatot a részletekért");
-            connectButton.setDisable(true);
-            deleteConnectionButton.setDisable(true);
-        } else {
-            StringBuilder details = new StringBuilder();
-            details.append("Név: ").append(config.getProfileName()).append("\n");
-            details.append("Típus: ").append(config.getType().getDisplayName()).append("\n");
-            details.append("Aktív: ").append(config.isActive() ? "✅ Igen" : "❌ Nem").append("\n\n");
-
-            switch (config.getType()) {
-                case FIREBASE:
-                    details.append("Project ID: ").append(config.getFirebaseProjectId()).append("\n");
-                    details.append("Database URL: ").append(config.getFirebaseDatabaseUrl());
-                    break;
-                case MYSQL:
-                case POSTGRESQL:
-                    details.append("Host: ").append(config.getJdbcHost()).append("\n");
-                    details.append("Port: ").append(config.getJdbcPort()).append("\n");
-                    details.append("Adatbázis: ").append(config.getJdbcDatabase()).append("\n");
-                    details.append("Felhasználó: ").append(config.getJdbcUsername());
-                    break;
-            }
-
-            connectionDetailsLabel.setText(details.toString());
-            connectButton.setDisable(config.isActive());
-            deleteConnectionButton.setDisable(config.isActive());
-        }
-    }
-
-    private void connectToSelectedDatabase() {
-        DatabaseConnectionConfig selected = connectionsList.getSelectionModel().getSelectedItem();
-        if (selected == null) return;
-
-        if (!AlertHelper.showConfirmation("Kapcsolat váltás",
-                "Biztosan váltani szeretne erre a kapcsolatra?",
-                selected.getProfileName() + "\n\nAz alkalmazás újra fog indulni.")) {
-            return;
-        }
-
-        updateStatus("🔄 Kapcsolódás...", Color.BLUE);
-        progressIndicator.setVisible(true);
-
-        Task<Void> connectTask = new Task<Void>() {
-            @Override
-            protected Void call() throws Exception {
-                connectionManager.applyConnection(selected);
-                return null;
-            }
-        };
-
-        connectTask.setOnSucceeded(e -> {
-            Platform.runLater(() -> {
-                progressIndicator.setVisible(false);
-                updateStatus("✅ Kapcsolat létrehozva! Az alkalmazás újraindul...", Color.GREEN);
-
-                Task<Void> restartTask = new Task<Void>() {
-                    @Override
-                    protected Void call() throws Exception {
-                        Thread.sleep(2000);
-                        return null;
-                    }
-                };
-
-                restartTask.setOnSucceeded(event -> {
-                    Platform.runLater(() -> {
-                        getDialogPane().getScene().getWindow().hide();
-                        System.exit(0);
-                    });
-                });
-
-                new Thread(restartTask).start();
-            });
-        });
-
-        connectTask.setOnFailed(e -> {
-            Platform.runLater(() -> {
-                progressIndicator.setVisible(false);
-                Throwable ex = connectTask.getException();
-                updateStatus("❌ Hiba: " + (ex != null ? ex.getMessage() : "Ismeretlen hiba"), Color.RED);
-            });
-        });
-
-        new Thread(connectTask).start();
-    }
-
-    private void deleteSelectedConnection() {
-        DatabaseConnectionConfig selected = connectionsList.getSelectionModel().getSelectedItem();
-        if (selected == null) return;
-
-        if (selected.isActive()) {
-            updateStatus("❌ Az aktív kapcsolat nem törölhető.", Color.RED);
-            return;
-        }
-
-        if (AlertHelper.showConfirmation("Törlés megerősítése",
-                "Biztosan törli ezt a kapcsolatot?",
-                selected.getProfileName())) {
-            connectionsList.getItems().remove(selected);
-            connectionManager.getSavedConnections().remove(selected);
-            connectionManager.saveConnection(selected); // This will remove it from saved file
-            updateStatus("✅ Kapcsolat törölve.", Color.GREEN);
-            loadConnections();
-        }
-    }
-
-    private void testNewConnection() {
-        if (profileNameField.getText().trim().isEmpty()) {
-            updateStatus("⚠️ Adjon meg egy nevet a kapcsolatnak!", Color.ORANGE);
-            return;
-        }
-
-        DatabaseConnectionConfig config = createConfigFromFields();
-
-        updateStatus("🔄 Kapcsolat tesztelése...", Color.BLUE);
-        progressIndicator.setVisible(true);
-
-        Task<Boolean> testTask = new Task<Boolean>() {
-            @Override
-            protected Boolean call() throws Exception {
-                return connectionManager.testConnection(config);
-            }
-        };
-
-        testTask.setOnSucceeded(e -> {
-            Platform.runLater(() -> {
-                progressIndicator.setVisible(false);
-                boolean success = testTask.getValue();
-                if (success) {
-                    updateStatus("✅ Sikeres kapcsolódás!", Color.GREEN);
-                } else {
-                    updateStatus("❌ Sikertelen kapcsolódás.", Color.RED);
-                }
-            });
-        });
-
-        testTask.setOnFailed(e -> {
-            Platform.runLater(() -> {
-                progressIndicator.setVisible(false);
-                Throwable ex = testTask.getException();
-                updateStatus("❌ Hiba: " + (ex != null ? ex.getMessage() : "Ismeretlen hiba"), Color.RED);
-            });
-        });
-
-        new Thread(testTask).start();
-    }
-
-    private void saveNewConnection() {
-        if (profileNameField.getText().trim().isEmpty()) {
-            updateStatus("⚠️ Adjon meg egy nevet a kapcsolatnak!", Color.ORANGE);
-            return;
-        }
-
-        DatabaseConnectionConfig config = createConfigFromFields();
-
-        // Check if name already exists
-        boolean nameExists = connectionManager.getSavedConnections().stream()
-                .anyMatch(c -> c.getProfileName().equals(config.getProfileName()));
-
-        if (nameExists) {
-            updateStatus("⚠️ Már létezik kapcsolat ezzel a névvel!", Color.ORANGE);
-            return;
-        }
-
-        updateStatus("💾 Kapcsolat mentése...", Color.BLUE);
-        progressIndicator.setVisible(true);
-
-        Task<Void> saveTask = new Task<Void>() {
-            @Override
-            protected Void call() throws Exception {
-                connectionManager.saveConnection(config);
-                return null;
-            }
-        };
-
-        saveTask.setOnSucceeded(e -> {
-            Platform.runLater(() -> {
-                progressIndicator.setVisible(false);
-                updateStatus("✅ Kapcsolat elmentve!", Color.GREEN);
-                clearNewConnectionFields();
-                loadConnections();
-
-                // Switch to existing connections tab
-                TabPane tabPane = (TabPane) getDialogPane().getContent().lookup(".tab-pane");
-                if (tabPane != null) {
-                    tabPane.getSelectionModel().selectFirst();
-                }
-            });
-        });
-
-        saveTask.setOnFailed(e -> {
-            Platform.runLater(() -> {
-                progressIndicator.setVisible(false);
-                updateStatus("❌ Hiba a mentés során!", Color.RED);
-            });
-        });
-
-        new Thread(saveTask).start();
-    }
-
     private DatabaseConnectionConfig createConfigFromFields() {
         DatabaseConnectionConfig config = new DatabaseConnectionConfig();
         config.setType(databaseTypeCombo.getValue());
@@ -670,13 +889,6 @@ public class SettingsDialog extends Dialog<Void> {
         jdbcUsernameField.clear();
         jdbcPasswordField.clear();
         databaseTypeCombo.setValue(DatabaseType.FIREBASE);
-    }
-
-    private void updateStatus(String message, Color color) {
-        Platform.runLater(() -> {
-            statusLabel.setText(message);
-            statusLabel.setTextFill(color);
-        });
     }
 
     private String getIconForType(DatabaseType type) {

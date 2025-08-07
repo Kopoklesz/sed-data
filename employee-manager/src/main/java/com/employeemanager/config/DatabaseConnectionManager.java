@@ -67,7 +67,7 @@ public class DatabaseConnectionManager {
                     return false;
             }
         } catch (Exception e) {
-            log.error("Connection test failed", e);
+            log.error("Connection test failed: {}", e.getMessage(), e);
             return false;
         }
     }
@@ -101,33 +101,70 @@ public class DatabaseConnectionManager {
             // Cleanup
             testApp.delete();
 
+            log.info("Firebase connection test successful");
             return true;
         } catch (Exception e) {
-            log.error("Firebase connection test failed", e);
+            log.error("Firebase connection test failed: {}", e.getMessage(), e);
             return false;
         }
     }
 
     private boolean testJdbcConnection(DatabaseConnectionConfig config) {
+        String jdbcUrl = getJdbcUrl(config);
+        log.info("Testing JDBC connection to: {}", jdbcUrl);
+        log.info("Database type: {}", config.getType());
+        log.info("Host: {}, Port: {}, Database: {}", config.getJdbcHost(), config.getJdbcPort(), config.getJdbcDatabase());
+        log.info("Username: {}", config.getJdbcUsername());
+
         HikariConfig hikariConfig = new HikariConfig();
-        hikariConfig.setJdbcUrl(config.getJdbcUrl());
+        hikariConfig.setJdbcUrl(jdbcUrl);
         hikariConfig.setUsername(config.getJdbcUsername());
         hikariConfig.setPassword(config.getJdbcPassword());
         hikariConfig.setConnectionTimeout(5000); // 5 seconds timeout
         hikariConfig.setMaximumPoolSize(1);
+        hikariConfig.setDriverClassName(getDriverClassName(config.getType()));
+
+        // PostgreSQL specific settings
+        if (config.getType() == DatabaseType.POSTGRESQL) {
+            hikariConfig.addDataSourceProperty("sslmode", "disable");
+        }
 
         try (HikariDataSource testDataSource = new HikariDataSource(hikariConfig)) {
             try (Connection connection = testDataSource.getConnection()) {
-                return connection.isValid(2);
+                boolean isValid = connection.isValid(2);
+                if (isValid) {
+                    log.info("JDBC connection test successful for {} at {}:{}/{}",
+                            config.getType(), config.getJdbcHost(), config.getJdbcPort(), config.getJdbcDatabase());
+
+                    // Test if we can actually query the database
+                    String testQuery = config.getType() == DatabaseType.MYSQL ?
+                            "SELECT 1" : "SELECT version()";
+                    try (var stmt = connection.createStatement();
+                         var rs = stmt.executeQuery(testQuery)) {
+                        if (rs.next()) {
+                            log.info("Database query test successful");
+                        }
+                    }
+                }
+                return isValid;
             }
         } catch (SQLException e) {
-            log.error("JDBC connection test failed", e);
+            log.error("JDBC connection test failed - SQL Error: {}", e.getMessage());
+            log.error("SQL State: {}, Error Code: {}", e.getSQLState(), e.getErrorCode());
+            if (e.getMessage().contains("password") || e.getMessage().contains("authentication")) {
+                log.error("Authentication failed. Please check username and password.");
+            }
+            return false;
+        } catch (Exception e) {
+            log.error("JDBC connection test failed - General Error: {}", e.getMessage(), e);
             return false;
         }
     }
 
     public void applyConnection(DatabaseConnectionConfig config) throws ServiceException {
         try {
+            log.info("Applying connection: {} ({})", config.getProfileName(), config.getType());
+
             // Close existing connections
             closeCurrentConnections();
 
@@ -142,18 +179,61 @@ public class DatabaseConnectionManager {
                     break;
             }
 
+            // Update active status for all connections
+            for (DatabaseConnectionConfig conn : savedConnections) {
+                conn.setActive(false);
+            }
+
+            // Find and update the connection in saved list
+            boolean found = false;
+            for (int i = 0; i < savedConnections.size(); i++) {
+                if (savedConnections.get(i).getProfileName().equals(config.getProfileName())) {
+                    DatabaseConnectionConfig updated = config.copy();
+                    updated.setActive(true);
+                    savedConnections.set(i, updated);
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                DatabaseConnectionConfig newConfig = config.copy();
+                newConfig.setActive(true);
+                savedConnections.add(newConfig);
+            }
+
             // Save as active connection
             this.activeConnection = config.copy();
             this.activeConnection.setActive(true);
 
-            // Save configuration
-            saveConnection(config);
+            // Save connections to file
+            saveConnectionsToFile();
+
+            // Save runtime config
             saveRuntimeConfig(config);
 
-            log.info("Successfully applied {} connection", config.getType());
+            // Update repository factory if available
+            updateRepositoryFactory();
+
+            log.info("Successfully applied {} connection: {}", config.getType(), config.getProfileName());
         } catch (Exception e) {
-            log.error("Failed to apply connection", e);
+            log.error("Failed to apply connection: {}", e.getMessage(), e);
             throw new ServiceException("Failed to apply database connection: " + e.getMessage(), e);
+        }
+    }
+
+    private void updateRepositoryFactory() {
+        try {
+            // Try to update RepositoryFactory if it exists in the context
+            if (applicationContext != null && applicationContext.containsBean("repositoryFactory")) {
+                Object factory = applicationContext.getBean("repositoryFactory");
+                if (factory != null) {
+                    factory.getClass().getMethod("updateRepositories").invoke(factory);
+                    log.info("Repository factory updated for new connection");
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not update repository factory: {}", e.getMessage());
         }
     }
 
@@ -185,8 +265,12 @@ public class DatabaseConnectionManager {
     }
 
     private void applyJdbcConnection(DatabaseConnectionConfig config) {
+        String jdbcUrl = getJdbcUrl(config);
+        log.info("Applying JDBC connection to: {}", jdbcUrl);
+        log.info("Database type: {}, Username: {}", config.getType(), config.getJdbcUsername());
+
         HikariConfig hikariConfig = new HikariConfig();
-        hikariConfig.setJdbcUrl(config.getJdbcUrl());
+        hikariConfig.setJdbcUrl(jdbcUrl);
         hikariConfig.setUsername(config.getJdbcUsername());
         hikariConfig.setPassword(config.getJdbcPassword());
         hikariConfig.setMaximumPoolSize(10);
@@ -194,8 +278,37 @@ public class DatabaseConnectionManager {
         hikariConfig.setConnectionTimeout(30000);
         hikariConfig.setIdleTimeout(600000);
         hikariConfig.setMaxLifetime(1800000);
+        hikariConfig.setDriverClassName(getDriverClassName(config.getType()));
+
+        // PostgreSQL specific settings
+        if (config.getType() == DatabaseType.POSTGRESQL) {
+            hikariConfig.addDataSourceProperty("sslmode", "disable");
+        }
 
         currentDataSource = new HikariDataSource(hikariConfig);
+
+        // Test the connection
+        try (Connection conn = currentDataSource.getConnection()) {
+            log.info("JDBC connection pool created and tested successfully");
+        } catch (SQLException e) {
+            log.error("Failed to test JDBC connection pool: {}", e.getMessage());
+            throw new RuntimeException("Failed to create JDBC connection pool", e);
+        }
+    }
+
+    private String getJdbcUrl(DatabaseConnectionConfig config) {
+        if (config.getType() == DatabaseType.MYSQL) {
+            return String.format("jdbc:mysql://%s:%d/%s?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8",
+                    config.getJdbcHost() != null ? config.getJdbcHost() : "localhost",
+                    config.getJdbcPort() != null ? config.getJdbcPort() : 3306,
+                    config.getJdbcDatabase() != null ? config.getJdbcDatabase() : "testdb");
+        } else if (config.getType() == DatabaseType.POSTGRESQL) {
+            return String.format("jdbc:postgresql://%s:%d/%s?sslmode=disable",
+                    config.getJdbcHost() != null ? config.getJdbcHost() : "localhost",
+                    config.getJdbcPort() != null ? config.getJdbcPort() : 5432,
+                    config.getJdbcDatabase() != null ? config.getJdbcDatabase() : "testdb");
+        }
+        return null;
     }
 
     private void closeCurrentConnections() {
@@ -218,12 +331,43 @@ public class DatabaseConnectionManager {
         savedConnections.add(config.copy());
 
         // Save to file
+        saveConnectionsToFile();
+    }
+
+    public void updateConnection(DatabaseConnectionConfig config) {
+        // Find and update existing connection
+        for (int i = 0; i < savedConnections.size(); i++) {
+            if (savedConnections.get(i).getProfileName().equals(config.getProfileName())) {
+                DatabaseConnectionConfig updated = config.copy();
+                updated.setActive(savedConnections.get(i).isActive());
+                savedConnections.set(i, updated);
+                saveConnectionsToFile();
+                return;
+            }
+        }
+        // If not found, add as new
+        saveConnection(config);
+    }
+
+    public void deleteConnection(DatabaseConnectionConfig config) {
+        if (config.isActive()) {
+            log.warn("Cannot delete active connection: {}", config.getProfileName());
+            return;
+        }
+
+        savedConnections.removeIf(c -> c.getProfileName().equals(config.getProfileName()));
+        saveConnectionsToFile();
+        log.info("Deleted connection: {}", config.getProfileName());
+    }
+
+    private void saveConnectionsToFile() {
         try {
             Path configPath = Paths.get(CONFIG_FILE);
             String json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(savedConnections);
             Files.writeString(configPath, json);
+            log.info("Saved {} connections to file", savedConnections.size());
         } catch (IOException e) {
-            log.error("Failed to save connections", e);
+            log.error("Failed to save connections to file", e);
         }
     }
 
@@ -240,6 +384,8 @@ public class DatabaseConnectionManager {
                         .filter(DatabaseConnectionConfig::isActive)
                         .findFirst()
                         .orElse(null);
+
+                log.info("Loaded {} saved connections", savedConnections.size());
             }
         } catch (IOException e) {
             log.error("Failed to load saved connections", e);
@@ -260,7 +406,7 @@ public class DatabaseConnectionManager {
                     break;
                 case MYSQL:
                 case POSTGRESQL:
-                    lines.add("spring.datasource.url=" + config.getJdbcUrl());
+                    lines.add("spring.datasource.url=" + getJdbcUrl(config));
                     lines.add("spring.datasource.username=" + config.getJdbcUsername());
                     lines.add("spring.datasource.password=" + config.getJdbcPassword());
                     lines.add("spring.datasource.driver-class-name=" + getDriverClassName(config.getType()));
@@ -293,6 +439,8 @@ public class DatabaseConnectionManager {
     }
 
     public List<DatabaseConnectionConfig> getSavedConnections() {
+        // Reload from file to ensure we have the latest active status
+        loadSavedConnections();
         return new ArrayList<>(savedConnections);
     }
 

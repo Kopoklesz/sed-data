@@ -9,41 +9,17 @@
   "jdbcUsername" : null,
   "jdbcPasswordEncrypted" : null,
   "profileName" : "Default",
+  "active" : false
+}, {
+  "type" : "MYSQL",
+  "firebaseServiceAccountPath" : null,
+  "firebaseProjectId" : null,
+  "firebaseDatabaseUrl" : null,
+  "jdbcHost" : "localhost",
+  "jdbcPort" : 3306,
+  "jdbcDatabase" : "testdb",
+  "jdbcUsername" : "testuser",
+  "jdbcPasswordEncrypted" : "nsIH5qGltopXs1A7gBfJPw==",
+  "profileName" : "Docker MySQL Test",
   "active" : true
-}, {
-  "type" : "MYSQL",
-  "firebaseServiceAccountPath" : null,
-  "firebaseProjectId" : null,
-  "firebaseDatabaseUrl" : null,
-  "jdbcHost" : "localhost",
-  "jdbcPort" : 3306,
-  "jdbcDatabase" : "employeemanager",
-  "jdbcUsername" : "asd",
-  "jdbcPasswordEncrypted" : "AT8wuoczFtjQi1+82UijtA==",
-  "profileName" : "Teszt 1",
-  "active" : false
-}, {
-  "type" : "MYSQL",
-  "firebaseServiceAccountPath" : null,
-  "firebaseProjectId" : null,
-  "firebaseDatabaseUrl" : null,
-  "jdbcHost" : "localhost",
-  "jdbcPort" : 3306,
-  "jdbcDatabase" : "testdb",
-  "jdbcUsername" : "testuser",
-  "jdbcPasswordEncrypted" : "nsIH5qGltopXs1A7gBfJPw==",
-  "profileName" : "MySQL - Teszt",
-  "active" : false
-}, {
-  "type" : "POSTGRESQL",
-  "firebaseServiceAccountPath" : null,
-  "firebaseProjectId" : null,
-  "firebaseDatabaseUrl" : null,
-  "jdbcHost" : "localhost",
-  "jdbcPort" : 5432,
-  "jdbcDatabase" : "testdb",
-  "jdbcUsername" : "testuser",
-  "jdbcPasswordEncrypted" : "nsIH5qGltopXs1A7gBfJPw==",
-  "profileName" : "PostgreSQL - Teszt",
-  "active" : false
 } ]
