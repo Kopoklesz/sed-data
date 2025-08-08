@@ -62,6 +62,38 @@
             </MenuItem>
             <MenuItem text="Névjegy" onAction="#showAboutDialog"/>
         </Menu>
+
+        <!-- In the "Fájl" menu, after the existing items: -->
+        <SeparatorMenuItem/>
+        <MenuItem text="🔄 Adatok frissítése" onAction="#forceRefreshData">
+            <accelerator>
+                <KeyCodeCombination alt="UP" code="F5" control="UP" meta="UP" shift="UP" shortcut="UP"/>
+            </accelerator>
+        </MenuItem>
+
+        <!-- In the "Eszközök" menu, after "Adatbázis kapcsolat beállító": -->
+        <MenuItem text="📊 Adatbázis állapot" onAction="#showDatabaseStatus"/>
+
+        <!-- New complete Eszközök menu section with all items: -->
+        <Menu text="Eszközök">
+            <MenuItem text="Adatbázis kapcsolat kezelő" onAction="#showDatabaseSettings">
+                <graphic>
+                    <Label text="🗄️"/>
+                </graphic>
+            </MenuItem>
+            <MenuItem text="Adatbázis állapot" onAction="#showDatabaseStatus">
+                <graphic>
+                    <Label text="📊"/>
+                </graphic>
+            </MenuItem>
+            <SeparatorMenuItem/>
+            <MenuItem text="Használati útmutató" onAction="#showUserGuide">
+                <accelerator>
+                    <KeyCodeCombination alt="UP" code="F1" control="UP" meta="UP" shift="UP" shortcut="UP"/>
+                </accelerator>
+            </MenuItem>
+            <MenuItem text="Névjegy" onAction="#showAboutDialog"/>
+        </Menu>
     </MenuBar>
 
     <TabPane VBox.vgrow="ALWAYS" styleClass="main-tabpane" fx:id="mainTabPane">

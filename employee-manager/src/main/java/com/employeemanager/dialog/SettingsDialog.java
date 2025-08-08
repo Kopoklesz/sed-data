@@ -13,10 +13,21 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
+
+import com.employeemanager.service.impl.DatabaseSwitchService;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.util.Duration;
+
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import org.springframework.context.ApplicationContext;
+
 
 import java.io.File;
 import java.util.ArrayList;
@@ -62,10 +73,14 @@ public class SettingsDialog extends Dialog<Void> {
     // Edit mode flag
     private boolean isEditMode = false;
     private DatabaseConnectionConfig editingConfig = null;
+    private final ApplicationContext applicationContext;
 
-    public SettingsDialog(SettingsService settingsService, DatabaseConnectionManager connectionManager) {
+    public SettingsDialog(SettingsService settingsService,
+                          DatabaseConnectionManager connectionManager,
+                          ApplicationContext applicationContext) {
         this.settingsService = settingsService;
         this.connectionManager = connectionManager;
+        this.applicationContext = applicationContext;
 
         setTitle("Adatbázis kapcsolat kezelő");
         setHeaderText(null);
@@ -491,97 +506,32 @@ public class SettingsDialog extends Dialog<Void> {
         DatabaseConnectionConfig selected = connectionsList.getSelectionModel().getSelectedItem();
         if (selected == null) return;
 
-        if (!AlertHelper.showConfirmation("Kapcsolat váltás",
-                "Biztosan váltani szeretne erre a kapcsolatra?",
-                selected.getProfileName() + "\n\n" +
-                        "⚠️ Az alkalmazás újra fog indulni a kapcsolat váltásához!")) {
+        // Create custom dialog for connection options
+        Alert optionDialog = new Alert(Alert.AlertType.CONFIRMATION);
+        optionDialog.setTitle("Kapcsolat váltás");
+        optionDialog.setHeaderText("Válassza ki a váltás módját:");
+        optionDialog.setContentText(selected.getProfileName() + "\n" +
+                selected.getType().getDisplayName());
+
+        ButtonType hotSwitch = new ButtonType("🔥 Gyors váltás (újraindítás nélkül)");
+        ButtonType restartSwitch = new ButtonType("🔄 Váltás újraindítással");
+        ButtonType cancel = new ButtonType("Mégse", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+        optionDialog.getButtonTypes().setAll(hotSwitch, restartSwitch, cancel);
+
+        Optional<ButtonType> result = optionDialog.showAndWait();
+
+        if (result.isEmpty() || result.get() == cancel) {
             return;
         }
 
-        // Create a progress dialog
-        Alert progressAlert = new Alert(Alert.AlertType.INFORMATION);
-        progressAlert.setTitle("Kapcsolódás");
-        progressAlert.setHeaderText("Kapcsolat váltás folyamatban...");
-        progressAlert.setContentText("Az alkalmazás újraindul...");
-        progressAlert.getButtonTypes().clear();
+        boolean useHotSwitch = result.get() == hotSwitch;
 
-        ProgressIndicator progressIndicator = new ProgressIndicator();
-        progressIndicator.setPrefSize(50, 50);
-        progressAlert.setGraphic(progressIndicator);
-
-        Task<Boolean> connectTask = new Task<Boolean>() {
-            @Override
-            protected Boolean call() throws Exception {
-                try {
-                    // Apply the connection (this saves it as active)
-                    connectionManager.applyConnection(selected);
-                    return true;
-                } catch (Exception e) {
-                    throw e;
-                }
-            }
-        };
-
-        connectTask.setOnSucceeded(e -> {
-            Platform.runLater(() -> {
-                try {
-                    progressAlert.close();
-                } catch (Exception ex) {
-                    // Ignore
-                }
-
-                // Show success message briefly
-                Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
-                successAlert.setTitle("Sikeres kapcsolódás");
-                successAlert.setHeaderText("Kapcsolat létrehozva!");
-                successAlert.setContentText("Az alkalmazás most újraindul...\n" +
-                        "Új kapcsolat: " + selected.getProfileName());
-                successAlert.show();
-
-                // Restart application after delay
-                Task<Void> restartTask = new Task<Void>() {
-                    @Override
-                    protected Void call() throws Exception {
-                        Thread.sleep(2000);
-                        return null;
-                    }
-                };
-
-                restartTask.setOnSucceeded(event -> {
-                    Platform.runLater(() -> {
-                        try {
-                            // Close all windows
-                            getDialogPane().getScene().getWindow().hide();
-                            successAlert.close();
-
-                            // Restart the application
-                            restartApplication();
-                        } catch (Exception ex) {
-                            log.error("Error during restart: {}", ex.getMessage());
-                        }
-                    });
-                });
-
-                new Thread(restartTask).start();
-            });
-        });
-
-        connectTask.setOnFailed(e -> {
-            Platform.runLater(() -> {
-                try {
-                    progressAlert.close();
-                } catch (Exception ex) {
-                    // Ignore
-                }
-                Throwable ex = connectTask.getException();
-                AlertHelper.showError("Kapcsolódási hiba",
-                        "Nem sikerült kapcsolódni",
-                        ex != null ? ex.getMessage() : "Ismeretlen hiba");
-            });
-        });
-
-        progressAlert.show();
-        new Thread(connectTask).start();
+        if (useHotSwitch) {
+            performHotDatabaseSwitch(selected);
+        } else {
+            performRestartDatabaseSwitch(selected);
+        }
     }
 
     private void restartApplication() {
@@ -938,5 +888,192 @@ public class SettingsDialog extends Dialog<Void> {
                 setGraphic(box);
             }
         }
+    }
+
+    private void performHotDatabaseSwitch(DatabaseConnectionConfig selected) {
+        // Check if DatabaseSwitchService is available
+        DatabaseSwitchService switchService = null;
+        try {
+            switchService = applicationContext.getBean(DatabaseSwitchService.class);
+        } catch (Exception e) {
+            log.error("DatabaseSwitchService not available", e);
+            AlertHelper.showError("Hiba",
+                    "A gyors váltás nem elérhető",
+                    "Használja az újraindításos váltást.");
+            return;
+        }
+
+        // Create progress dialog
+        Dialog<Void> progressDialog = new Dialog<>();
+        progressDialog.setTitle("Adatbázis váltás");
+        progressDialog.setHeaderText("Kapcsolat váltás folyamatban...");
+
+        DialogPane dialogPane = progressDialog.getDialogPane();
+        dialogPane.getButtonTypes().add(ButtonType.CANCEL);
+
+        VBox content = new VBox(15);
+        content.setAlignment(Pos.CENTER);
+        content.setPadding(new Insets(20));
+
+        ProgressIndicator progressIndicator = new ProgressIndicator();
+        progressIndicator.setPrefSize(60, 60);
+
+        Label statusLabel = new Label("Kapcsolódás: " + selected.getProfileName());
+        statusLabel.setFont(Font.font("System", 14));
+
+        Label detailLabel = new Label("Inicializálás...");
+        detailLabel.setFont(Font.font("System", FontPosture.ITALIC, 12));
+        detailLabel.setTextFill(Color.GRAY);
+
+        content.getChildren().addAll(progressIndicator, statusLabel, detailLabel);
+        dialogPane.setContent(content);
+
+        // Disable cancel initially
+        Button cancelButton = (Button) dialogPane.lookupButton(ButtonType.CANCEL);
+        cancelButton.setDisable(true);
+
+        // Start switch task
+        CompletableFuture<Boolean> switchFuture = switchService.switchWithoutRestart(selected);
+
+        final DatabaseSwitchService finalSwitchService = switchService;
+
+        // Monitor progress
+        Timeline progressTimeline = new Timeline(new KeyFrame(Duration.millis(500), e -> {
+            DatabaseSwitchService.DatabaseStatus status = finalSwitchService.getDatabaseStatus();
+            detailLabel.setText(status.toString());
+        }));
+        progressTimeline.setCycleCount(Timeline.INDEFINITE);
+        progressTimeline.play();
+
+        switchFuture.thenAccept(success -> {
+            Platform.runLater(() -> {
+                progressTimeline.stop();
+                progressDialog.close();
+
+                if (success) {
+                    // Close settings dialog
+                    getDialogPane().getScene().getWindow().hide();
+
+                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                    successAlert.setTitle("Sikeres váltás");
+                    successAlert.setHeaderText("Adatbázis kapcsolat váltva!");
+                    successAlert.setContentText("Új kapcsolat: " + selected.getProfileName() + "\n" +
+                            "Az adatok automatikusan frissülnek.");
+                    successAlert.showAndWait();
+                } else {
+                    AlertHelper.showError("Váltási hiba",
+                            "Nem sikerült váltani az adatbázist",
+                            "Ellenőrizze a kapcsolat beállításait és próbálja újra.");
+                    loadConnections(); // Reload to show correct active state
+                }
+            });
+        }).exceptionally(ex -> {
+            Platform.runLater(() -> {
+                progressTimeline.stop();
+                progressDialog.close();
+
+                AlertHelper.showError("Váltási hiba",
+                        "Hiba történt a váltás során",
+                        ex.getMessage());
+                loadConnections();
+            });
+            return null;
+        });
+
+        progressDialog.showAndWait();
+    }
+
+    private void performRestartDatabaseSwitch(DatabaseConnectionConfig selected) {
+        if (!AlertHelper.showConfirmation("Kapcsolat váltás",
+                "Biztosan váltani szeretne erre a kapcsolatra?",
+                selected.getProfileName() + "\n\n" +
+                        "⚠️ Az alkalmazás újra fog indulni a kapcsolat váltásához!")) {
+            return;
+        }
+
+        // Create a progress dialog
+        Alert progressAlert = new Alert(Alert.AlertType.INFORMATION);
+        progressAlert.setTitle("Kapcsolódás");
+        progressAlert.setHeaderText("Kapcsolat váltás folyamatban...");
+        progressAlert.setContentText("Az alkalmazás újraindul...");
+        progressAlert.getButtonTypes().clear();
+
+        ProgressIndicator progressIndicator = new ProgressIndicator();
+        progressIndicator.setPrefSize(50, 50);
+        progressAlert.setGraphic(progressIndicator);
+
+        Task<Boolean> connectTask = new Task<Boolean>() {
+            @Override
+            protected Boolean call() throws Exception {
+                try {
+                    // Apply the connection (this saves it as active)
+                    connectionManager.applyConnection(selected);
+                    return true;
+                } catch (Exception e) {
+                    throw e;
+                }
+            }
+        };
+
+        connectTask.setOnSucceeded(e -> {
+            Platform.runLater(() -> {
+                try {
+                    progressAlert.close();
+                } catch (Exception ex) {
+                    // Ignore
+                }
+
+                // Show success message briefly
+                Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                successAlert.setTitle("Sikeres kapcsolódás");
+                successAlert.setHeaderText("Kapcsolat létrehozva!");
+                successAlert.setContentText("Az alkalmazás most újraindul...\n" +
+                        "Új kapcsolat: " + selected.getProfileName());
+                successAlert.show();
+
+                // Restart application after delay
+                Task<Void> restartTask = new Task<Void>() {
+                    @Override
+                    protected Void call() throws Exception {
+                        Thread.sleep(2000);
+                        return null;
+                    }
+                };
+
+                restartTask.setOnSucceeded(event -> {
+                    Platform.runLater(() -> {
+                        try {
+                            // Close all windows
+                            getDialogPane().getScene().getWindow().hide();
+                            successAlert.close();
+
+                            // Restart the application
+                            restartApplication();
+                        } catch (Exception ex) {
+                            log.error("Error during restart: {}", ex.getMessage());
+                        }
+                    });
+                });
+
+                new Thread(restartTask).start();
+            });
+        });
+
+        connectTask.setOnFailed(e -> {
+            Platform.runLater(() -> {
+                try {
+                    progressAlert.close();
+                } catch (Exception ex) {
+                    // Ignore
+                }
+                Throwable ex = connectTask.getException();
+                AlertHelper.showError("Kapcsolódási hiba",
+                        "Nem sikerült kapcsolódni",
+                        ex != null ? ex.getMessage() : "Ismeretlen hiba");
+            });
+        });
+
+        progressAlert.show();
+        new Thread(connectTask).start();
     }
 }
