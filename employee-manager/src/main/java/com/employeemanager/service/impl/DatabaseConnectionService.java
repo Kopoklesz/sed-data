@@ -307,7 +307,7 @@ public class DatabaseConnectionService {
         String encoded = encryptedPassword.substring(ENCRYPTED_PREFIX.length());
         return new String(Base64.getDecoder().decode(encoded));
     }
-    
+
     /**
      * Belső osztály a kapcsolatok JSON tárolásához
      */
@@ -329,6 +329,22 @@ public class DatabaseConnectionService {
         
         public void setActiveConnection(String activeConnection) {
             this.activeConnection = activeConnection;
+        }
+    }
+
+    /**
+     * Kapcsolat tesztelése részletes hibaüzenettel
+     */
+    public String testConnectionWithDetails(ConnectionConfig config) {
+        try {
+            boolean success = connectionManager.testConnection(config);
+            if (success) {
+                return "Sikeres kapcsolat";
+            } else {
+                return "Kapcsolódás sikertelen - ellenőrizze a logokat részletekért";
+            }
+        } catch (Exception e) {
+            return "Hiba: " + e.getMessage();
         }
     }
 }

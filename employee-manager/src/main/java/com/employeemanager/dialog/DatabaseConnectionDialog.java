@@ -432,55 +432,55 @@ public class DatabaseConnectionDialog extends Dialog<Void> {
             }
         }
     }
-    
+
     private void testConnection() {
         try {
             ConnectionConfig config = buildConfigFromForm();
-            
+
             if (!config.isValid()) {
-                AlertHelper.showWarning("Érvénytelen konfiguráció", 
-                    "Kérem töltse ki az összes kötelező mezőt!");
+                AlertHelper.showWarning("Érvénytelen konfiguráció",
+                        "Kérem töltse ki az összes kötelező mezőt!");
                 return;
             }
-            
+
             // Progress indicator megjelenítése
             testButton.setDisable(true);
             testButton.setText("Tesztelés...");
-            
-            // Aszinkron tesztelés
-            CompletableFuture.supplyAsync(() -> 
-                connectionService.testConnection(config)
-            ).thenAcceptAsync(success -> {
+
+            // Aszinkron tesztelés - MÓDOSÍTÁS
+            CompletableFuture.supplyAsync(() ->
+                    connectionService.testConnectionWithDetails(config)  // új metódus használata
+            ).thenAcceptAsync(message -> {
                 Platform.runLater(() -> {
                     testButton.setDisable(false);
                     testButton.setText("Kapcsolat tesztelése");
-                    
-                    if (success) {
-                        AlertHelper.showInformation("Sikeres kapcsolat", 
-                            "A kapcsolat tesztelése sikeres!", 
-                            "Az adatbázis elérhető és a kapcsolat létrehozható.");
+
+                    if (message.startsWith("Sikeres")) {
+                        AlertHelper.showInformation("Sikeres kapcsolat",
+                                "A kapcsolat tesztelése sikeres!",
+                                "Az adatbázis elérhető és a kapcsolat létrehozható.");
                     } else {
-                        AlertHelper.showError("Kapcsolódási hiba", 
-                            "Nem sikerült kapcsolódni az adatbázishoz", 
-                            "Ellenőrizze a kapcsolat beállításait!");
+                        AlertHelper.showError("Kapcsolódási hiba",
+                                "Nem sikerült kapcsolódni az adatbázishoz",
+                                message);  // részletes hibaüzenet megjelenítése
                     }
                 });
             }).exceptionally(e -> {
                 Platform.runLater(() -> {
                     testButton.setDisable(false);
                     testButton.setText("Kapcsolat tesztelése");
-                    
-                    AlertHelper.showError("Hiba", 
-                        "Hiba történt a tesztelés során", 
-                        e.getMessage());
+
+                    AlertHelper.showError("Hiba",
+                            "Hiba történt a tesztelés során",
+                            e.getMessage());
                 });
                 return null;
             });
-            
+
         } catch (Exception e) {
-            AlertHelper.showError("Hiba", 
-                "Nem sikerült tesztelni a kapcsolatot", 
-                e.getMessage());
+            AlertHelper.showError("Hiba",
+                    "Nem sikerült tesztelni a kapcsolatot",
+                    e.getMessage());
         }
     }
     

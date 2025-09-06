@@ -60,24 +60,29 @@ public class DatabaseConnectionManager {
     private boolean testJdbcConnection(ConnectionConfig config) {
         String jdbcUrl = config.getJdbcUrl();
         log.info("Testing JDBC connection to: {}", jdbcUrl);
-        
+
         try {
             // Driver betöltése
             Class.forName(config.getDriverClassName());
-            
+
             // Kapcsolódás
             try (Connection conn = DriverManager.getConnection(
-                    jdbcUrl, 
-                    config.getUsername(), 
+                    jdbcUrl,
+                    config.getUsername(),
                     config.getPassword())) {
-                
-                return conn != null && !conn.isClosed();
+
+                boolean isValid = conn != null && !conn.isClosed();
+                if (isValid) {
+                    log.info("JDBC connection test successful");
+                }
+                return isValid;
             }
         } catch (ClassNotFoundException e) {
             log.error("JDBC driver not found: {}", config.getDriverClassName(), e);
             return false;
         } catch (SQLException e) {
             log.error("Failed to connect to database: {}", jdbcUrl, e);
+            log.error("SQL Error Code: {}, SQL State: {}", e.getErrorCode(), e.getSQLState());
             return false;
         }
     }
