@@ -1,0 +1,71 @@
+{
+  "connections" : {
+    "Firebase (Default)" : {
+      "name" : "Firebase (Default)",
+      "type" : "FIREBASE",
+      "host" : null,
+      "port" : null,
+      "database" : null,
+      "username" : null,
+      "password" : null,
+      "active" : true,
+      "firebaseProjectId" : "employee-manager-e70b6",
+      "firebaseDatabaseUrl" : "https://employee-manager-e70b6.firebaseio.com",
+      "firebaseServiceAccountPath" : "classpath:service-account.json",
+      "maxPoolSize" : 10,
+      "minIdle" : 2,
+      "connectionTimeout" : 30000,
+      "valid" : true,
+      "jdbcUrl" : null,
+      "driverClassName" : null,
+      "connectionProperties" : { }
+    },
+    "H2 In-Memory (Testing)" : {
+      "name" : "H2 In-Memory (Testing)",
+      "type" : "H2",
+      "host" : null,
+      "port" : null,
+      "database" : "employeedb",
+      "username" : null,
+      "password" : null,
+      "active" : false,
+      "firebaseProjectId" : null,
+      "firebaseDatabaseUrl" : null,
+      "firebaseServiceAccountPath" : null,
+      "maxPoolSize" : 10,
+      "minIdle" : 2,
+      "connectionTimeout" : 30000,
+      "valid" : true,
+      "jdbcUrl" : "jdbc:h2:mem:employeedb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
+      "driverClassName" : "org.h2.Driver",
+      "connectionProperties" : { }
+    },
+    "MySQLTest" : {
+      "name" : "MySQLTest",
+      "type" : "MYSQL",
+      "host" : "localhost",
+      "port" : 3306,
+      "database" : "employeedb",
+      "username" : "root",
+      "password" : "ENC:cm9vdA==",
+      "active" : false,
+      "firebaseProjectId" : null,
+      "firebaseDatabaseUrl" : null,
+      "firebaseServiceAccountPath" : null,
+      "maxPoolSize" : 10,
+      "minIdle" : 2,
+      "connectionTimeout" : 30000,
+      "valid" : true,
+      "jdbcUrl" : "jdbc:mysql://localhost:3306/employeedb?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true",
+      "driverClassName" : "com.mysql.cj.jdbc.Driver",
+      "connectionProperties" : {
+        "password" : "ENC:cm9vdA==",
+        "useUnicode" : "true",
+        "characterEncoding" : "UTF-8",
+        "user" : "root",
+        "autoReconnect" : "true"
+      }
+    }
+  },
+  "activeConnection" : "Firebase (Default)"
+}
