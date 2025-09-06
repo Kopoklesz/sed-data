@@ -20,13 +20,13 @@ import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-@Repository
+// @Repository
 @Slf4j
 public class FirebaseWorkRecordRepository extends BaseFirebaseRepository<WorkRecord> implements WorkRecordRepository {
 
     private final EmployeeRepository employeeRepository;
 
-    @Autowired
+    // @Autowired
     public FirebaseWorkRecordRepository(Firestore firestore, EmployeeRepository employeeRepository) {
         super(firestore, "workrecords", WorkRecord.class);
         this.employeeRepository = employeeRepository;

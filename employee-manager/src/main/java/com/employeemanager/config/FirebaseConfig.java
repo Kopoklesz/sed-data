@@ -19,6 +19,8 @@ import java.text.SimpleDateFormat;
 import java.io.IOException;
 @Configuration
 public class FirebaseConfig {
+    /*
+
     @Value("${firebase.service-account.path}")
     private String serviceAccountPath;
     
@@ -55,6 +57,8 @@ public class FirebaseConfig {
             throw new IOException("Failed to initialize Firebase: " + e.getMessage(), e);
         }
     }
+
+    */
     @Bean
     public ObjectMapper objectMapper() {
         ObjectMapper mapper = new ObjectMapper();

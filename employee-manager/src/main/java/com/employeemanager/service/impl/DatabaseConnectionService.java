@@ -35,20 +35,52 @@ public class DatabaseConnectionService {
     
     private final Map<String, ConnectionConfig> savedConnections = new LinkedHashMap<>();
     private String activeConnectionName;
-    
+
     @PostConstruct
     public void init() {
         loadConnections();
-        
+
         // Ha nincs mentett kapcsolat, létrehozunk egy alapértelmezett Firebase kapcsolatot
         if (savedConnections.isEmpty()) {
             createDefaultConnections();
         }
-        
-        // Aktiváljuk az első elérhető kapcsolatot
+
+        // Ellenőrizzük, hogy az aktív kapcsolat még létezik-e
+        if (activeConnectionName != null && savedConnections.containsKey(activeConnectionName)) {
+            // A legutóbbi aktív kapcsolat még létezik - reaktiváljuk
+            ConnectionConfig activeConfig = savedConnections.get(activeConnectionName);
+            log.info("Restoring last active connection: {} ({})",
+                    activeConnectionName, activeConfig.getType());
+
+            // Kapcsolat tesztelése
+            if (connectionManager.testConnection(activeConfig)) {
+                connectionManager.setActiveConnection(activeConfig);
+                repositoryFactory.switchConnection(activeConfig);
+                activeConfig.setActive(true);
+                log.info("Successfully restored active connection: {}", activeConnectionName);
+            } else {
+                log.warn("Last active connection failed test, will fallback: {}", activeConnectionName);
+                activeConnectionName = null;
+            }
+        }
+
+        // Ha nincs érvényes aktív kapcsolat, keresünk egyet
         if (activeConnectionName == null && !savedConnections.isEmpty()) {
-            String firstConnection = savedConnections.keySet().iterator().next();
-            activateConnection(firstConnection);
+            // Először próbáljuk a Firebase-t (ha létezik)
+            ConnectionConfig firebaseConfig = savedConnections.values().stream()
+                    .filter(config -> config.getType() == DatabaseType.FIREBASE)
+                    .findFirst()
+                    .orElse(null);
+
+            if (firebaseConfig != null) {
+                log.info("No active connection, falling back to Firebase: {}", firebaseConfig.getName());
+                activateConnection(firebaseConfig.getName());
+            } else {
+                // Ha nincs Firebase, az első elérhető kapcsolat
+                String firstConnection = savedConnections.keySet().iterator().next();
+                log.info("No Firebase found, activating first available: {}", firstConnection);
+                activateConnection(firstConnection);
+            }
         }
     }
     
@@ -138,6 +170,8 @@ public class DatabaseConnectionService {
             .build();
         
         savedConnections.put(firebaseConfig.getName(), firebaseConfig);
+
+        /*
         
         // H2 tesztelési kapcsolat
         ConnectionConfig h2Config = ConnectionConfig.builder()
@@ -148,6 +182,8 @@ public class DatabaseConnectionService {
             .build();
         
         savedConnections.put(h2Config.getName(), h2Config);
+
+        */
         
         saveConnections();
     }
@@ -192,15 +228,37 @@ public class DatabaseConnectionService {
         if (!savedConnections.containsKey(name)) {
             throw new IllegalArgumentException("Connection not found: " + name);
         }
-        
-        // Nem törölhetjük az aktív kapcsolatot
+
+        // Ha az aktív kapcsolatot töröljük
         if (name.equals(activeConnectionName)) {
-            throw new IllegalStateException("Cannot remove active connection");
+            savedConnections.remove(name);
+
+            if (!savedConnections.isEmpty()) {
+                // Először próbáljuk a Firebase-t
+                ConnectionConfig firebaseConfig = savedConnections.values().stream()
+                        .filter(config -> config.getType() == DatabaseType.FIREBASE)
+                        .findFirst()
+                        .orElse(null);
+
+                if (firebaseConfig != null) {
+                    log.info("Active connection removed, switching to Firebase: {}", firebaseConfig.getName());
+                    activateConnection(firebaseConfig.getName());
+                } else {
+                    // Ha nincs Firebase, az első elérhető
+                    String newActive = savedConnections.keySet().iterator().next();
+                    log.info("Active connection removed, switching to: {}", newActive);
+                    activateConnection(newActive);
+                }
+            } else {
+                activeConnectionName = null;
+                log.info("No connections remaining after removal");
+            }
+        } else {
+            // Nem aktív kapcsolat törlése
+            savedConnections.remove(name);
         }
-        
-        savedConnections.remove(name);
+
         saveConnections();
-        
         log.info("Removed database connection: {}", name);
     }
     

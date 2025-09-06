@@ -82,22 +82,51 @@ public class MySQLSchemaInitializer implements SchemaInitializer {
             }
         }
     }
-    
+
     @Override
     public boolean isSchemaExists(DataSource dataSource) throws SQLException {
         try (Connection conn = dataSource.getConnection()) {
             DatabaseMetaData metaData = conn.getMetaData();
-            
-            // Ellenőrizzük, hogy léteznek-e a fő táblák
-            try (ResultSet rs = metaData.getTables(null, null, "employees", null)) {
-                if (!rs.next()) {
-                    return false;
+
+            // MySQL specifikus: katalógus (adatbázis név) lekérése
+            String catalog = conn.getCatalog();
+            log.debug("Checking schema in catalog: {}", catalog);
+
+            // Próbáljuk különböző formátumokban
+            String[] tableVariants = {"employees", "EMPLOYEES"};
+            boolean employeesExists = false;
+            boolean workRecordsExists = false;
+
+            // employees tábla ellenőrzése
+            for (String tableName : tableVariants) {
+                try (ResultSet rs = metaData.getTables(catalog, null, tableName, new String[]{"TABLE"})) {
+                    if (rs.next()) {
+                        log.debug("Found employees table as: {}", tableName);
+                        employeesExists = true;
+                        break;
+                    }
                 }
             }
-            
-            try (ResultSet rs = metaData.getTables(null, null, "work_records", null)) {
-                return rs.next();
+
+            if (!employeesExists) {
+                log.debug("employees table not found");
+                return false;
             }
+
+            // work_records tábla ellenőrzése
+            String[] workRecordVariants = {"work_records", "WORK_RECORDS"};
+            for (String tableName : workRecordVariants) {
+                try (ResultSet rs = metaData.getTables(catalog, null, tableName, new String[]{"TABLE"})) {
+                    if (rs.next()) {
+                        log.debug("Found work_records table as: {}", tableName);
+                        workRecordsExists = true;
+                        break;
+                    }
+                }
+            }
+
+            log.debug("Schema check result - employees: {}, work_records: {}", employeesExists, workRecordsExists);
+            return employeesExists && workRecordsExists;
         }
     }
 }

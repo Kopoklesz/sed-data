@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
-@Repository
+// @Repository
 @Slf4j
 public class FirebaseEmployeeRepository extends BaseFirebaseRepository<Employee> implements EmployeeRepository {
 
