@@ -232,23 +232,22 @@ public class MainViewController implements Initializable {
     @FXML
     private void showDatabaseSettings() {
         try {
-            // Megnyitjuk az adatbázis kapcsolat beállító dialógust
-            Dialog<Void> dialog = new DatabaseConnectionDialog(databaseConnectionService);
+            // ÚJ: Callback-kel nyitjuk meg a dialógust
+            Dialog<Void> dialog = new DatabaseConnectionDialog(databaseConnectionService, this::refreshAllData);
             dialog.showAndWait();
-            
-            // A dialógus bezárása után frissítjük az adatokat
-            // mivel lehet, hogy új adatbázisra váltott a felhasználó
+
+            // A meglévő loadInitialData() megtartjuk, mert:
+            // - A callback csak SIKERES aktiváláskor fut le
+            // - Ez minden dialog bezáráskor frissít (biztonság)
             loadInitialData();
-            
-            // Frissítjük a status bart
+
             updateStatus("Adatbázis kapcsolat beállítások frissítve");
-            
+
         } catch (Exception e) {
-            // Hiba esetén értesítjük a felhasználót
             AlertHelper.showError(
-                "Hiba", 
-                "Nem sikerült megnyitni az adatbázis beállításokat", 
-                e.getMessage()
+                    "Hiba",
+                    "Nem sikerült megnyitni az adatbázis beállításokat",
+                    e.getMessage()
             );
             updateStatus("Hiba az adatbázis beállítások megnyitása közben");
         }
@@ -377,9 +376,8 @@ public class MainViewController implements Initializable {
             @Override
             protected void updateItem(LocalDate item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                } else {
+                if (empty || item == null) setText(null);
+                else {
                     setText(item.format(DateTimeFormatter.ISO_LOCAL_DATE));
                 }
             }

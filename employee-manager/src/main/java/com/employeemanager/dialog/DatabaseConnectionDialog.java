@@ -22,6 +22,8 @@ import java.util.concurrent.CompletableFuture;
 public class DatabaseConnectionDialog extends Dialog<Void> {
     
     private final DatabaseConnectionService connectionService;
+
+    private Runnable onDatabaseChanged;
     
     // UI komponensek
     private final ListView<ConnectionConfig> connectionList = new ListView<>();
@@ -52,13 +54,14 @@ public class DatabaseConnectionDialog extends Dialog<Void> {
     private final StackPane formContainer = new StackPane();
     
     private ConnectionConfig editingConnection = null;
-    
-    public DatabaseConnectionDialog(DatabaseConnectionService connectionService) {
+
+    public DatabaseConnectionDialog(DatabaseConnectionService connectionService, Runnable onDatabaseChanged) {
         this.connectionService = connectionService;
-        
+        this.onDatabaseChanged = onDatabaseChanged;
+
         setTitle("Adatbázis kapcsolat beállító");
         setHeaderText("Adatbázis kapcsolatok kezelése");
-        
+
         setupDialog();
         loadConnections();
     }
@@ -509,6 +512,10 @@ public class DatabaseConnectionDialog extends Dialog<Void> {
                 
                 if (success) {
                     loadConnections();
+
+                    if (onDatabaseChanged != null) {
+                        onDatabaseChanged.run();
+                    }
                     
                     AlertHelper.showInformation("Sikeres aktiválás", 
                         "Kapcsolat aktiválva", 

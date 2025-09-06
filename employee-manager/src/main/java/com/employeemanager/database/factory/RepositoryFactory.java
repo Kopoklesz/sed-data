@@ -165,19 +165,28 @@ public class RepositoryFactory {
         currentConnectionKey = null;
         log.info("Repository cache cleared");
     }
-    
+
     /**
      * Aktív kapcsolat váltása
      */
     public synchronized void switchConnection(ConnectionConfig config) {
         // Beállítjuk az új aktív kapcsolatot
         connectionManager.setActiveConnection(config);
-        
-        // Töröljük a cache-t, hogy új repository-k jöjjenek létre
+
+        // Töröljük a cache-t
         clearCache();
-        
-        log.info("Switched to database connection: {} ({})", 
-            config.getName(), config.getType());
+
+        // AZONNAL létrehozzuk az új repository-kat
+        log.info("Creating new repositories for: {}", config.getType());
+        currentEmployeeRepository = createEmployeeRepository(config);
+        currentWorkRecordRepository = createWorkRecordRepository(config);
+        currentConnectionKey = getConnectionKey(config);
+
+        log.info("Switched to database connection: {} ({})",
+                config.getName(), config.getType());
+        log.info("New repositories created: EmployeeRepository={}, WorkRecordRepository={}",
+                currentEmployeeRepository.getClass().getSimpleName(),
+                currentWorkRecordRepository.getClass().getSimpleName());
     }
     
     /**
